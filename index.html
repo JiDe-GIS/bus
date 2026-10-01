@@ -222,6 +222,27 @@
     const HEADING_LOOK_AHEAD_METERS =
       4;
 
+    // ----------------------------------------------------------
+    // FILTRE DASHBOARD
+    //
+    // Exemple :
+    // https://jide-gis.github.io/bus/?scenario=Crue%20F%C3%A9vrier%202026
+    //
+    // Le sélecteur du Dashboard peut fournir MERGE_SRC ici.
+    // ----------------------------------------------------------
+
+    const URL_PARAMS =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const DASHBOARD_SCENARIO =
+      URL_PARAMS.get("scenario")
+      ||
+      URL_PARAMS.get("MERGE_SRC")
+      ||
+      "";
+
     // Anti-collision visuel.
     // Les véhicules qui convergent à moins de cette enveloppe
     // sont temporairement bloqués selon leur priorité ID_VEH.
@@ -973,6 +994,159 @@
     }
 
     // ==========================================================
+    // FILTRE SCÉNARIO REÇU DU DASHBOARD
+    // ==========================================================
+
+    function escapeSqlString(
+      value
+    ) {
+      return String(
+        value
+      ).replace(
+        /'/g,
+        "''"
+      );
+    }
+
+
+    async function applyDashboardScenarioFilter(
+      webscene,
+      scenarioValue
+    ) {
+      const scenario =
+        String(
+          scenarioValue || ""
+        ).trim();
+
+      if (
+        !scenario
+      ) {
+        console.log(
+          "Dashboard : aucun filtre scenario reçu."
+        );
+
+        return;
+      }
+
+      console.log(
+        "Dashboard : filtre scenario reçu :",
+        scenario
+      );
+
+      const escapedScenario =
+        escapeSqlString(
+          scenario
+        );
+
+      const layers =
+        webscene.allLayers
+          ?
+          webscene.allLayers.toArray()
+          :
+          [];
+
+      let filteredCount =
+        0;
+
+      for (
+        const layer
+        of layers
+      ) {
+        try {
+          if (
+            typeof layer.load === "function"
+          ) {
+            await layer.load();
+          }
+
+          const fields =
+            layer.fields
+            ||
+            [];
+
+          const scenarioField =
+            fields.find(
+              function(field) {
+                return String(
+                  field.name || ""
+                ).toUpperCase() ===
+                "SCENARIO";
+              }
+            );
+
+          if (
+            !scenarioField
+          ) {
+            continue;
+          }
+
+          if (
+            !(
+              "definitionExpression"
+              in layer
+            )
+          ) {
+            continue;
+          }
+
+          const scenarioExpression =
+            scenarioField.name
+            +
+            " = '"
+            +
+            escapedScenario
+            +
+            "'";
+
+          const existingExpression =
+            String(
+              layer.definitionExpression
+              ||
+              ""
+            ).trim();
+
+          layer.definitionExpression =
+            existingExpression
+            ?
+            "("
+            +
+            existingExpression
+            +
+            ") AND ("
+            +
+            scenarioExpression
+            +
+            ")"
+            :
+            scenarioExpression;
+
+          filteredCount +=
+            1;
+
+          console.log(
+            "Filtre SCENARIO appliqué :",
+            layer.title,
+            "=>",
+            layer.definitionExpression
+          );
+        }
+        catch (error) {
+          console.warn(
+            "Filtre SCENARIO ignoré pour :",
+            layer.title,
+            error
+          );
+        }
+      }
+
+      console.log(
+        "Nombre de couches filtrées par SCENARIO :",
+        filteredCount
+      );
+    }
+
+
+    // ==========================================================
     // PROGRAMME PRINCIPAL
     // ==========================================================
 
@@ -1049,6 +1223,12 @@
           view.spatialReference.wkid,
           "latestWkid :",
           view.spatialReference.latestWkid
+        );
+
+        // Filtre transmis par le sélecteur du Dashboard.
+        await applyDashboardScenarioFilter(
+          webscene,
+          DASHBOARD_SCENARIO
         );
 
         // Eau : aucun override côté SDK.
