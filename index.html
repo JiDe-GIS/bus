@@ -26,11 +26,11 @@
       left: 50%;
       bottom: 14px;
       transform: translateX(-50%);
-      z-index: 100;
+      z-index: 110;
       display: none;
       width: min(520px, calc(100vw - 28px));
       box-sizing: border-box;
-      padding: 9px 10px 10px 10px;
+      padding: 7px 8px;
       background: rgba(255, 255, 255, 0.94);
       border-radius: 9px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
@@ -71,25 +71,66 @@
       font-size: 13px;
     }
 
-    #slideTitle {
-      margin-top: 7px;
-      font-size: 14px;
-      line-height: 1.2;
-      font-weight: 700;
-      color: #1f2933;
+    /* ---------------------------------------------------------
+       TITRE + DESCRIPTION SELON LE STYLE DE LA DIAPO WEB SCENE
+
+       caption = en haut
+       cover   = au centre
+       none    = masqué
+       --------------------------------------------------------- */
+
+    #slidePresentation {
+      position: absolute;
+      z-index: 105;
+      display: none;
+      pointer-events: none;
+      box-sizing: border-box;
+      max-width: min(780px, calc(100vw - 64px));
+      padding: 18px 24px;
+      border-radius: 10px;
+      background: rgba(20, 20, 20, 0.42);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(2px);
+      color: #ffffff;
+      text-align: center;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+      font-family: "Avenir Next", Avenir, Arial, sans-serif;
     }
 
-    #slideDescription {
-      margin-top: 3px;
-      max-height: 52px;
-      overflow: auto;
-      font-size: 12px;
+    #slidePresentation.caption {
+      display: block;
+      top: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    #slidePresentation.cover {
+      display: block;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #slidePresentation.none {
+      display: none;
+    }
+
+    #presentationTitle {
+      font-size: clamp(22px, 2.2vw, 38px);
+      line-height: 1.12;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    #presentationDescription {
+      margin-top: 8px;
+      font-size: clamp(13px, 1.2vw, 19px);
       line-height: 1.35;
-      color: #4b5563;
+      font-weight: 400;
       white-space: pre-line;
     }
 
-    #slideDescription:empty {
+    #presentationDescription:empty {
       display: none;
     }
   </style>
@@ -121,14 +162,17 @@
 <body>
   <div id="viewDiv"></div>
 
+  <div id="slidePresentation" class="none">
+    <div id="presentationTitle"></div>
+    <div id="presentationDescription"></div>
+  </div>
+
   <div id="slideControls">
     <div id="slideNav">
       <button id="prevSlide" type="button" title="Diapositive précédente">‹</button>
       <select id="slideSelect" aria-label="Diapositives de la Web Scene"></select>
       <button id="nextSlide" type="button" title="Diapositive suivante">›</button>
     </div>
-    <div id="slideTitle"></div>
-    <div id="slideDescription"></div>
   </div>
 
   <script type="module">
@@ -168,9 +212,11 @@
     // Les véhicules qui convergent à moins de cette enveloppe
     // sont temporairement bloqués selon leur priorité ID_VEH.
     const SAFETY_RADIUS = {
-      CAR: 3.0,
-      BUS: 5.5,
-      TRUCK: 6.5
+      // Distance centre-à-centre minimale visée.
+      // Valeurs volontairement conservatrices pour une démo.
+      CAR: 7.0,
+      BUS: 14.0,
+      TRUCK: 17.0
     };
 
     const MODEL_BY_ID = {
@@ -659,10 +705,13 @@
     }
 
     // ==========================================================
-    // EAU : ACTIVE / RENFORCE LE RENDU EAU EXISTANT
+    // EAU : ANIMATION FORCÉE DU WaterSymbol3DLayer
     // ==========================================================
 
-    function tuneWaterSymbol(symbol) {
+    function tuneWaterSymbol(
+      symbol,
+      liveWaterLayers
+    ) {
       let changed =
         false;
 
@@ -687,9 +736,6 @@
           if (
             symbolLayer.type === "water"
           ) {
-            // Les WaterSymbol3DLayer sont animés nativement
-            // par le moteur 3D. On accentue ici les petites vagues
-            // qui font évoluer les reflets.
             symbolLayer.waveStrength =
               "moderate";
 
@@ -702,6 +748,10 @@
               symbolLayer.waveDirection =
                 35;
             }
+
+            liveWaterLayers.push(
+              symbolLayer
+            );
 
             changed =
               true;
@@ -727,10 +777,15 @@
       let waterCount =
         0;
 
+      const liveWaterLayers =
+        [];
+
       const layers =
         webscene.allLayers
-          ? webscene.allLayers.toArray()
-          : [];
+          ?
+          webscene.allLayers.toArray()
+          :
+          [];
 
       await Promise.allSettled(
         layers.map(
@@ -762,7 +817,8 @@
         ) {
           const result =
             tuneWaterSymbol(
-              renderer.symbol
+              renderer.symbol,
+              liveWaterLayers
             );
 
           changed =
@@ -780,7 +836,8 @@
             function(info) {
               const result =
                 tuneWaterSymbol(
-                  info.symbol
+                  info.symbol,
+                  liveWaterLayers
                 );
 
               changed =
@@ -800,7 +857,8 @@
             function(info) {
               const result =
                 tuneWaterSymbol(
-                  info.symbol
+                  info.symbol,
+                  liveWaterLayers
                 );
 
               changed =
@@ -824,6 +882,46 @@
       console.log(
         "WaterSymbol3DLayer animés détectés :",
         waterCount
+      );
+
+      if (
+        waterCount === 0
+      ) {
+        console.warn(
+          "Aucun WaterSymbol3DLayer détecté : impossible d'animer cette eau sans identifier sa couche source."
+        );
+
+        return;
+      }
+
+      // --------------------------------------------------------
+      // Le shader Esri anime déjà l'eau.
+      // On ajoute un très léger changement de direction à 8 Hz
+      // afin que le mouvement soit réellement visible en démo,
+      // même en vue quasi verticale.
+      // --------------------------------------------------------
+
+      let dynamicDirection =
+        35;
+
+      window.setInterval(
+        function() {
+          dynamicDirection =
+            (
+              dynamicDirection +
+              1.4
+            )
+            %
+            360;
+
+          liveWaterLayers.forEach(
+            function(symbolLayer) {
+              symbolLayer.waveDirection =
+                dynamicDirection;
+            }
+          );
+        },
+        125
       );
     }
 
@@ -887,14 +985,19 @@
           "nextSlide"
         );
 
+      const presentationDiv =
+        document.getElementById(
+          "slidePresentation"
+        );
+
       const titleDiv =
         document.getElementById(
-          "slideTitle"
+          "presentationTitle"
         );
 
       const descriptionDiv =
         document.getElementById(
-          "slideDescription"
+          "presentationDescription"
         );
 
       let currentIndex =
@@ -917,11 +1020,26 @@
           ||
           "";
 
+        const layout =
+          slide?.layout
+          ||
+          "caption";
+
         titleDiv.textContent =
           title;
 
         descriptionDiv.textContent =
           description;
+
+        presentationDiv.className =
+          (
+            layout === "cover" ||
+            layout === "caption"
+          )
+          ?
+          layout
+          :
+          "none";
       }
 
       slideEntries.forEach(
@@ -1450,17 +1568,34 @@
             objectLayer.castShadows =
               true;
 
-            // Rend le bateau un peu plus lisible dans la scène.
+            // Bateau :
+            // le modèle Esri a son origine proche de la ligne d'eau.
+            // On force un ancrage plus bas afin de remonter visuellement
+            // la coque par rapport à la surface.
             if (
               type === "BOAT"
             ) {
+              objectLayer.anchor =
+                "relative";
+
+              objectLayer.anchorPosition = {
+                x:
+                  0,
+
+                y:
+                  0,
+
+                z:
+                  -0.38
+              };
+
               if (
                 Number.isFinite(
                   objectLayer.height
                 )
               ) {
                 objectLayer.height *=
-                  1.25;
+                  1.20;
               }
 
               if (
@@ -1469,7 +1604,7 @@
                 )
               ) {
                 objectLayer.width *=
-                  1.25;
+                  1.20;
               }
 
               if (
@@ -1478,7 +1613,7 @@
                 )
               ) {
                 objectLayer.depth *=
-                  1.25;
+                  1.20;
               }
             }
 
@@ -1707,12 +1842,11 @@
         function updateCollisionState(
           currentTime
         ) {
-          // 10 Hz suffit pour 12 véhicules et allège fortement
-          // le travail effectué à chaque frame.
+          // 20 Hz : réactif mais toujours très léger pour 12 véhicules.
           if (
             currentTime -
             lastCollisionCheck <
-            100
+            50
           ) {
             return;
           }
@@ -1723,8 +1857,18 @@
           const newBlocked =
             new Set();
 
-          const horizonSeconds =
-            0.8;
+          // On échantillonne les 1,8 prochaines secondes.
+          // Cela détecte aussi deux véhicules qui se croisent
+          // entre "maintenant" et la position finale de prédiction.
+          const sampleTimes = [
+            0.25,
+            0.50,
+            0.75,
+            1.00,
+            1.25,
+            1.50,
+            1.80
+          ];
 
           for (
             let i = 0;
@@ -1742,38 +1886,10 @@
               const vehicleB =
                 roadVehicles[j];
 
-              const predictedDistanceA =
-                (
-                  vehicleA.currentDistance
-                  +
-                  vehicleA.currentSpeedMs
-                  *
-                  horizonSeconds
-                )
-                %
-                vehicleA.route.totalLength;
-
-              const predictedDistanceB =
-                (
-                  vehicleB.currentDistance
-                  +
-                  vehicleB.currentSpeedMs
-                  *
-                  horizonSeconds
-                )
-                %
-                vehicleB.route.totalLength;
-
-              const predictedA =
-                pointAtDistance(
-                  vehicleA.route,
-                  predictedDistanceA
-                );
-
-              const predictedB =
-                pointAtDistance(
-                  vehicleB.route,
-                  predictedDistanceB
+              const threshold =
+                collisionThreshold(
+                  vehicleA,
+                  vehicleB
                 );
 
               const distanceNow =
@@ -1785,30 +1901,75 @@
                   view.spatialReference
                 );
 
-              const distanceFuture =
-                distanceMeters(
-                  predictedA.x,
-                  predictedA.y,
-                  predictedB.x,
-                  predictedB.y,
-                  view.spatialReference
-                );
-
-              const threshold =
-                collisionThreshold(
-                  vehicleA,
-                  vehicleB
-                );
-
-              const converging =
-                distanceFuture <
+              let minFutureDistance =
                 distanceNow;
 
+              for (
+                const t
+                of sampleTimes
+              ) {
+                const predictedDistanceA =
+                  (
+                    vehicleA.currentDistance
+                    +
+                    vehicleA.currentSpeedMs
+                    *
+                    t
+                  )
+                  %
+                  vehicleA.route.totalLength;
+
+                const predictedDistanceB =
+                  (
+                    vehicleB.currentDistance
+                    +
+                    vehicleB.currentSpeedMs
+                    *
+                    t
+                  )
+                  %
+                  vehicleB.route.totalLength;
+
+                const predictedA =
+                  pointAtDistance(
+                    vehicleA.route,
+                    predictedDistanceA
+                  );
+
+                const predictedB =
+                  pointAtDistance(
+                    vehicleB.route,
+                    predictedDistanceB
+                  );
+
+                const sampleDistance =
+                  distanceMeters(
+                    predictedA.x,
+                    predictedA.y,
+                    predictedB.x,
+                    predictedB.y,
+                    view.spatialReference
+                  );
+
+                minFutureDistance =
+                  Math.min(
+                    minFutureDistance,
+                    sampleDistance
+                  );
+              }
+
+              const conflictAhead =
+                minFutureDistance <
+                threshold;
+
+              const alreadyTooClose =
+                distanceNow <
+                threshold *
+                0.90;
+
               if (
-                distanceFuture <
-                threshold
-                &&
-                converging
+                conflictAhead ||
+                alreadyTooClose
               ) {
                 const loser =
                   chooseBlockedVehicle(
@@ -1913,9 +2074,9 @@
                 vehicle.targetSpeedMs <
                 vehicle.currentSpeedMs
                 ?
-                5.0
+                10.0
                 :
-                2.5;
+                2.8;
 
               vehicle.currentSpeedMs =
                 moveToward(
