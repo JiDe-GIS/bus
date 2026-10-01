@@ -34,6 +34,43 @@
       font-family: "Avenir Next", Avenir, sans-serif;
     }
 
+    /* Très léger renforcement du rendu 3D uniquement.
+       Le but est de faire ressortir le mesh sans l'assombrir. */
+    #viewDiv canvas {
+      filter:
+        contrast(1.05)
+        saturate(1.07);
+    }
+
+    #weatherCanvas,
+    #lightningFlash {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #weatherCanvas {
+      z-index: 90;
+      display: none;
+    }
+
+    #lightningFlash {
+      z-index: 91;
+      display: none;
+      opacity: 0;
+      background:
+        radial-gradient(
+          circle at 52% 8%,
+          rgba(255, 255, 255, 0.92) 0%,
+          rgba(220, 235, 255, 0.55) 12%,
+          rgba(190, 215, 255, 0.18) 30%,
+          rgba(255, 255, 255, 0) 62%
+        );
+      mix-blend-mode: screen;
+    }
+
     /* Aucun cartouche "Mobilité 3D / 13 véhicules". */
 
     #slideControls {
@@ -219,6 +256,9 @@
 
 <body>
   <div id="viewDiv"></div>
+
+  <canvas id="weatherCanvas"></canvas>
+  <div id="lightningFlash"></div>
 
   <div id="slidePresentation" class="none">
     <div id="presentationTitle"></div>
@@ -788,6 +828,551 @@
     // Le rendu est celui enregistré dans la Web Scene.
     //
     // ==========================================================
+    // EAU NATIVE + EFFETS MÉTÉO POUR SCÈNE LOCALE
+    // ==========================================================
+
+    function normalizeSlideText(
+      value
+    ) {
+      return String(
+        value || ""
+      )
+        .normalize("NFD")
+        .replace(
+          /[\u0300-\u036f]/g,
+          ""
+        )
+        .toLowerCase()
+        .trim();
+    }
+
+
+    async function enhanceNativeWater(
+      webscene
+    ) {
+      const liveWaterLayers =
+        [];
+
+      const layers =
+        webscene.allLayers
+          ?
+          webscene.allLayers.toArray()
+          :
+          [];
+
+      await Promise.allSettled(
+        layers.map(
+          function(layer) {
+            return layer.load();
+          }
+        )
+      );
+
+      for (
+        const layer
+        of layers
+      ) {
+        try {
+          if (
+            !layer.renderer ||
+            typeof layer.renderer.clone !== "function"
+          ) {
+            continue;
+          }
+
+          const renderer =
+            layer.renderer.clone();
+
+          let changed =
+            false;
+
+          function inspectSymbol(
+            symbol
+          ) {
+            if (
+              !symbol ||
+              !symbol.symbolLayers
+            ) {
+              return;
+            }
+
+            symbol.symbolLayers.forEach(
+              function(symbolLayer) {
+                if (
+                  symbolLayer.type !== "water"
+                ) {
+                  return;
+                }
+
+                // On ne touche ni à la couleur ni au matériau :
+                // les reflets et jeux de lumière restent ceux d'Esri.
+                symbolLayer.waterbodySize =
+                  "small";
+
+                symbolLayer.waveStrength =
+                  "slight";
+
+                if (
+                  symbolLayer.waveDirection == null
+                ) {
+                  symbolLayer.waveDirection =
+                    35;
+                }
+
+                liveWaterLayers.push({
+                  layer:
+                    symbolLayer,
+
+                  baseDirection:
+                    Number(
+                      symbolLayer.waveDirection
+                    ) || 35
+                });
+
+                changed =
+                  true;
+              }
+            );
+          }
+
+          inspectSymbol(
+            renderer.symbol
+          );
+
+          renderer.uniqueValueInfos?.forEach(
+            function(info) {
+              inspectSymbol(
+                info.symbol
+              );
+            }
+          );
+
+          renderer.classBreakInfos?.forEach(
+            function(info) {
+              inspectSymbol(
+                info.symbol
+              );
+            }
+          );
+
+          if (
+            changed
+          ) {
+            layer.renderer =
+              renderer;
+          }
+        }
+        catch (error) {
+          console.warn(
+            "Eau : couche ignorée :",
+            layer.title,
+            error
+          );
+        }
+      }
+
+      console.log(
+        "Eau native animée :",
+        liveWaterLayers.length,
+        "WaterSymbol3DLayer."
+      );
+
+      if (
+        liveWaterLayers.length === 0
+      ) {
+        return;
+      }
+
+      // Petit mouvement périodique de direction, très limité :
+      // on conserve l'aspect natif, mais on force un changement
+      // visible des reflets sans overlay graphique.
+      let phase =
+        0;
+
+      window.setInterval(
+        function() {
+          phase +=
+            0.16;
+
+          const offset =
+            Math.sin(
+              phase
+            )
+            *
+            2.5;
+
+          liveWaterLayers.forEach(
+            function(item) {
+              item.layer.waveDirection =
+                (
+                  item.baseDirection +
+                  offset +
+                  360
+                )
+                %
+                360;
+            }
+          );
+        },
+        180
+      );
+    }
+
+
+    function createLocalWeatherController() {
+      const canvas =
+        document.getElementById(
+          "weatherCanvas"
+        );
+
+      const flash =
+        document.getElementById(
+          "lightningFlash"
+        );
+
+      const ctx =
+        canvas.getContext(
+          "2d"
+        );
+
+      let active =
+        false;
+
+      let drops =
+        [];
+
+      let animationHandle =
+        null;
+
+      let lightningTimer =
+        null;
+
+      function resize() {
+        const dpr =
+          Math.min(
+            window.devicePixelRatio || 1,
+            2
+          );
+
+        canvas.width =
+          Math.max(
+            1,
+            Math.floor(
+              window.innerWidth *
+              dpr
+            )
+          );
+
+        canvas.height =
+          Math.max(
+            1,
+            Math.floor(
+              window.innerHeight *
+              dpr
+            )
+          );
+
+        canvas.style.width =
+          window.innerWidth +
+          "px";
+
+        canvas.style.height =
+          window.innerHeight +
+          "px";
+
+        ctx.setTransform(
+          dpr,
+          0,
+          0,
+          dpr,
+          0,
+          0
+        );
+
+        drops =
+          Array.from(
+            {
+              length:
+                Math.max(
+                  90,
+                  Math.round(
+                    window.innerWidth /
+                    8
+                  )
+                )
+            },
+            function() {
+              return {
+                x:
+                  Math.random() *
+                  window.innerWidth,
+
+                y:
+                  Math.random() *
+                  window.innerHeight,
+
+                len:
+                  12 +
+                  Math.random() *
+                  18,
+
+                speed:
+                  650 +
+                  Math.random() *
+                  520,
+
+                alpha:
+                  0.20 +
+                  Math.random() *
+                  0.28
+              };
+            }
+          );
+      }
+
+      function drawRain(
+        now
+      ) {
+        if (
+          !active
+        ) {
+          return;
+        }
+
+        const width =
+          window.innerWidth;
+
+        const height =
+          window.innerHeight;
+
+        ctx.clearRect(
+          0,
+          0,
+          width,
+          height
+        );
+
+        ctx.lineWidth =
+          1.15;
+
+        ctx.lineCap =
+          "round";
+
+        const dt =
+          1 /
+          60;
+
+        drops.forEach(
+          function(drop) {
+            drop.y +=
+              drop.speed *
+              dt;
+
+            drop.x -=
+              drop.speed *
+              0.10 *
+              dt;
+
+            if (
+              drop.y >
+              height +
+              30
+              ||
+              drop.x <
+              -30
+            ) {
+              drop.y =
+                -30 -
+                Math.random() *
+                120;
+
+              drop.x =
+                Math.random() *
+                width +
+                30;
+            }
+
+            ctx.strokeStyle =
+              "rgba(220,235,255," +
+              drop.alpha +
+              ")";
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+              drop.x,
+              drop.y
+            );
+
+            ctx.lineTo(
+              drop.x -
+              drop.len *
+              0.20,
+              drop.y +
+              drop.len
+            );
+
+            ctx.stroke();
+          }
+        );
+
+        animationHandle =
+          requestAnimationFrame(
+            drawRain
+          );
+      }
+
+      function flashLightning() {
+        if (
+          !active
+        ) {
+          return;
+        }
+
+        flash.style.display =
+          "block";
+
+        flash.animate(
+          [
+            {
+              opacity:
+                0
+            },
+            {
+              opacity:
+                0.58
+            },
+            {
+              opacity:
+                0.08
+            },
+            {
+              opacity:
+                0.42
+            },
+            {
+              opacity:
+                0
+            }
+          ],
+          {
+            duration:
+              430,
+
+            easing:
+              "ease-out"
+          }
+        );
+
+        scheduleLightning();
+      }
+
+      function scheduleLightning() {
+        if (
+          lightningTimer
+        ) {
+          window.clearTimeout(
+            lightningTimer
+          );
+        }
+
+        if (
+          !active
+        ) {
+          return;
+        }
+
+        lightningTimer =
+          window.setTimeout(
+            flashLightning,
+            4200 +
+            Math.random() *
+            6500
+          );
+      }
+
+      function start() {
+        if (
+          active
+        ) {
+          return;
+        }
+
+        active =
+          true;
+
+        resize();
+
+        canvas.style.display =
+          "block";
+
+        flash.style.display =
+          "block";
+
+        animationHandle =
+          requestAnimationFrame(
+            drawRain
+          );
+
+        scheduleLightning();
+      }
+
+      function stop() {
+        active =
+          false;
+
+        canvas.style.display =
+          "none";
+
+        flash.style.display =
+          "none";
+
+        ctx.clearRect(
+          0,
+          0,
+          window.innerWidth,
+          window.innerHeight
+        );
+
+        if (
+          animationHandle
+        ) {
+          cancelAnimationFrame(
+            animationHandle
+          );
+        }
+
+        if (
+          lightningTimer
+        ) {
+          window.clearTimeout(
+            lightningTimer
+          );
+        }
+      }
+
+      window.addEventListener(
+        "resize",
+        function() {
+          if (
+            active
+          ) {
+            resize();
+          }
+        }
+      );
+
+      return {
+        start:
+          start,
+
+        stop:
+          stop
+      };
+    }
+
+
+    // ==========================================================
     // DIAPOSITIVES
     // ==========================================================
 
@@ -795,7 +1380,8 @@
       webscene,
       view,
       roadVehicleLayer,
-      boatLayer
+      boatLayer,
+      weatherController
     ) {
       const presentation =
         webscene.presentation;
@@ -859,6 +1445,88 @@
 
       let currentIndex =
         0;
+
+      const normalizedTitles =
+        slideEntries.map(
+          function(slide) {
+            return normalizeSlideText(
+              slide?.title?.text
+            );
+          }
+        );
+
+      const rainStartIndex =
+        normalizedTitles.findIndex(
+          function(title) {
+            return title.includes(
+              "previsions 2050"
+            );
+          }
+        );
+
+      const rainStopIndex =
+        normalizedTitles.findIndex(
+          function(title) {
+            return title.includes(
+              "eclairer la gouvernance"
+            );
+          }
+        );
+
+      const starStartIndex =
+        Math.max(
+          0,
+          slideEntries.length - 2
+        );
+
+      function applySlideEnhancements(
+        index
+      ) {
+        const rainActive =
+          rainStartIndex >= 0
+          &&
+          index >=
+            rainStartIndex
+          &&
+          (
+            rainStopIndex < 0
+            ||
+            index <
+              rainStopIndex
+          );
+
+        if (
+          rainActive
+        ) {
+          weatherController.start();
+        }
+        else {
+          weatherController.stop();
+        }
+
+        // Les deux dernières slides gardent l'environnement
+        // enregistré dans la Web Scene, mais on active les étoiles.
+        if (
+          index >=
+          starStartIndex
+        ) {
+          view.environment.starsEnabled =
+            true;
+        }
+
+        console.log(
+          "Effets slide :",
+          index + 1,
+          {
+            rain:
+              rainActive,
+
+            stars:
+              index >=
+              starStartIndex
+          }
+        );
+      }
 
       let slideTransitionRunning =
         false;
@@ -983,6 +1651,10 @@
             }
           );
 
+          applySlideEnhancements(
+            index
+          );
+
           // Les couches d'animation ne font pas partie
           // des slides enregistrées : on les maintient visibles.
           roadVehicleLayer.visible =
@@ -1027,6 +1699,10 @@
 
       updateSlideText(
         slideEntries[0],
+        0
+      );
+
+      applySlideEnhancements(
         0
       );
 
@@ -1315,6 +1991,9 @@
       try {
         await authenticate();
 
+        const weatherController =
+          createLocalWeatherController();
+
         const webscene =
           new WebScene({
             portalItem: {
@@ -1392,10 +2071,17 @@
           DASHBOARD_SCENARIO
         );
 
-        // Eau : aucun override côté SDK.
-        // On conserve exactement le rendu enregistré dans la Web Scene.
-        console.log(
-          "Eau : rendu original de la Web Scene conservé."
+        // Eau : on conserve le matériau/couleur/reflets natifs Esri
+        // et on ajuste seulement les vagues.
+        enhanceNativeWater(
+          webscene
+        ).catch(
+          function(error) {
+            console.warn(
+              "Eau native : réglage ignoré :",
+              error
+            );
+          }
         );
 
         // Navigation dans les diapositives directement depuis
@@ -1404,7 +2090,8 @@
           webscene,
           view,
           roadVehicleLayer,
-          boatLayer
+          boatLayer,
+          weatherController
         );
 
         // ======================================================
