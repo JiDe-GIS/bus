@@ -28,56 +28,38 @@
       transform: translateX(-50%);
       z-index: 110;
       display: none;
-      width: min(520px, calc(100vw - 28px));
-      box-sizing: border-box;
-      padding: 7px 8px;
-      background: rgba(255, 255, 255, 0.94);
-      border-radius: 9px;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
-      font-family: "Avenir Next", Avenir, Arial, sans-serif;
       backdrop-filter: blur(3px);
     }
 
-    #slideNav {
-      display: grid;
-      grid-template-columns: 34px minmax(0, 1fr) 34px;
-      align-items: center;
-      gap: 6px;
-    }
-
     #slideControls button {
-      width: 34px;
-      height: 30px;
+      width: 48px;
+      height: 48px;
       border: 0;
-      border-radius: 5px;
+      border-radius: 10px;
       background: #ffffff;
-      font-size: 18px;
+      color: #1f2933;
+      font-family: Arial, sans-serif;
+      font-size: 30px;
+      line-height: 48px;
+      font-weight: 400;
       cursor: pointer;
+      padding: 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
     }
 
     #slideControls button:hover {
       background: #f2f2f2;
     }
 
-    #slideSelect {
-      width: 100%;
-      height: 30px;
-      min-width: 0;
-      border: 1px solid #cfcfcf;
-      border-radius: 5px;
-      background: #ffffff;
-      padding: 0 8px;
-      font-family: "Avenir Next", Avenir, Arial, sans-serif;
-      font-size: 13px;
+    #slideControls button:active {
+      transform: scale(0.96);
     }
-
-    /* ---------------------------------------------------------
-       TITRE + DESCRIPTION SELON LE STYLE DE LA DIAPO WEB SCENE
-
-       caption = en haut
-       cover   = au centre
-       none    = masqué
-       --------------------------------------------------------- */
 
     #slidePresentation {
       position: absolute;
@@ -182,11 +164,8 @@
   </div>
 
   <div id="slideControls">
-    <div id="slideNav">
-      <button id="prevSlide" type="button" title="Diapositive précédente">‹</button>
-      <select id="slideSelect" aria-label="Diapositives de la Web Scene"></select>
-      <button id="nextSlide" type="button" title="Diapositive suivante">›</button>
-    </div>
+    <button id="prevSlide" type="button" title="Diapositive précédente" aria-label="Diapositive précédente">‹</button>
+    <button id="nextSlide" type="button" title="Diapositive suivante" aria-label="Diapositive suivante">›</button>
   </div>
 
   <script type="module">
@@ -791,11 +770,6 @@
           "slideControls"
         );
 
-      const select =
-        document.getElementById(
-          "slideSelect"
-        );
-
       const prev =
         document.getElementById(
           "prevSlide"
@@ -863,37 +837,6 @@
           "none";
       }
 
-      slideEntries.forEach(
-        function(slide, index) {
-          const option =
-            document.createElement(
-              "option"
-            );
-
-          let title =
-            "Diapo " +
-            (index + 1);
-
-          if (
-            slide.title &&
-            slide.title.text
-          ) {
-            title =
-              slide.title.text;
-          }
-
-          option.value =
-            String(index);
-
-          option.textContent =
-            title;
-
-          select.appendChild(
-            option
-          );
-        }
-      );
-
       async function applySlide(
         index
       ) {
@@ -914,9 +857,6 @@
 
         currentIndex =
           index;
-
-        select.value =
-          String(index);
 
         updateSlideText(
           slideEntries[index],
@@ -950,17 +890,6 @@
         }
       }
 
-      select.addEventListener(
-        "change",
-        function() {
-          applySlide(
-            Number(
-              select.value
-            )
-          );
-        }
-      );
-
       prev.addEventListener(
         "click",
         function() {
@@ -985,7 +914,7 @@
       );
 
       controls.style.display =
-        "block";
+        "flex";
 
       console.log(
         "Diapositives disponibles :",
