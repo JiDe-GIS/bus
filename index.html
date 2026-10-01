@@ -153,6 +153,31 @@
 
 
 
+  <script>
+    // Supprime les paramètres de suivi ajoutés à l'URL (ex. utm_source)
+    // sans toucher aux paramètres OAuth "code" et "state".
+    (() => {
+      const url = new URL(window.location.href);
+      let changed = false;
+
+      for (const key of [...url.searchParams.keys()]) {
+        if (key.toLowerCase().startsWith("utm_")) {
+          url.searchParams.delete(key);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        const cleanUrl =
+          url.pathname +
+          (url.search ? url.search : "") +
+          url.hash;
+
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    })();
+  </script>
+
   <script type="module">
 
 
