@@ -226,15 +226,20 @@
 
 
     // ----------------------------------------------------------
-    // BUS GLB
+    // BUS 3D ESRI
     //
-    // Modèle léger :
-    // City Bus Single Decker
-    // CC0
+    // On utilise le symbole officiel "Bus" du web style
+    // EsriRealisticTransportationStyle.
+    //
+    // Avantage : pas de GLB externe ni d'extension glTF
+    // potentiellement incompatible avec le SDK.
     // ----------------------------------------------------------
 
-    const BUS_GLB_URL =
-      "https://cdn.3dassets.dev/assets/34194/v1/model.glb";
+    const BUS_WEB_STYLE_NAME =
+      "EsriRealisticTransportationStyle";
+
+    const BUS_WEB_STYLE_SYMBOL =
+      "Bus";
 
 
     // ----------------------------------------------------------
@@ -375,9 +380,7 @@
 
       Point,
 
-      PointSymbol3D,
-
-      ObjectSymbol3DLayer
+      WebStyleSymbol
 
     ] = await $arcgis.import([
 
@@ -399,9 +402,7 @@
 
       "@arcgis/core/geometry/Point.js",
 
-      "@arcgis/core/symbols/PointSymbol3D.js",
-
-      "@arcgis/core/symbols/ObjectSymbol3DLayer.js"
+      "@arcgis/core/symbols/WebStyleSymbol.js"
 
     ]);
 
@@ -1389,69 +1390,71 @@
         // MODÈLE 3D DU BUS
         // ======================================================
 
-        const busObject =
-          new ObjectSymbol3DLayer({
+        setStatus(
+          "Chargement du bus 3D Esri..."
+        );
 
 
-            resource: {
-
-              href:
-                BUS_GLB_URL
-
-            },
-
-
-            // --------------------------------------------------
-            // Hauteur réelle du bus.
-            //
-            // Les autres dimensions conservent les proportions.
-            // --------------------------------------------------
-
-            height:
-              2.89,
+        console.log(
+          "Chargement du WebStyleSymbol :",
+          BUS_WEB_STYLE_NAME,
+          "/",
+          BUS_WEB_STYLE_SYMBOL
+        );
 
 
-            // --------------------------------------------------
-            // Ancre en bas du modèle.
-            //
-            // Permet de poser les roues sur le mesh.
-            // --------------------------------------------------
+        const busWebStyle =
+          new WebStyleSymbol({
 
-            anchor:
-              "relative",
+            styleName:
+              BUS_WEB_STYLE_NAME,
 
-
-            anchorPosition: {
-
-              x:
-                0,
-
-              y:
-                0,
-
-              z:
-                -0.5
-
-            },
-
-
-            castShadows:
-              true
+            name:
+              BUS_WEB_STYLE_SYMBOL
 
           });
 
+
+        // ------------------------------------------------------
+        // fetchSymbol() récupère le vrai PointSymbol3D Esri.
+        // On clone le symbole avant de modifier son orientation.
+        // ------------------------------------------------------
+
+        const fetchedBusSymbol =
+          await busWebStyle.fetchSymbol();
 
 
         const busSymbol =
-          new PointSymbol3D({
+          fetchedBusSymbol.clone();
 
-            symbolLayers: [
 
-              busObject
+        if (
+          !busSymbol.symbolLayers ||
+          busSymbol.symbolLayers.length === 0
+        ) {
 
-            ]
+          throw new Error(
+            "Le symbole 3D Esri 'Bus' ne contient aucun symbolLayer."
+          );
 
-          });
+        }
+
+
+        const busObject =
+          busSymbol.symbolLayers.getItemAt(
+            0
+          );
+
+
+        // Ombres du modèle 3D.
+        busObject.castShadows =
+          true;
+
+
+        console.log(
+          "Bus WebStyle Esri chargé :",
+          busObject
+        );
 
 
 
@@ -1507,7 +1510,7 @@
 
 
         console.log(
-          "Bus créé dans le SCR de la scène :",
+          "Bus Esri créé dans le SCR de la scène :",
           busGraphic.geometry.spatialReference
         );
 
