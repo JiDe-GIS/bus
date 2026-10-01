@@ -568,188 +568,175 @@
 
 
     // ==========================================================
-    // DISTANCE ENTRE DEUX COORDONNÉES WGS84
+    // DISTANCE ENTRE DEUX POINTS DANS LE SCR DE LA SCÈNE
     // ==========================================================
 
     function distanceMeters(
-      lon1,
-      lat1,
-      lon2,
-      lat2
+      x1,
+      y1,
+      x2,
+      y2,
+      spatialReference
     ) {
 
-      const R =
-        6371008.8;
+      // --------------------------------------------------------
+      // Cas d'un SCR géographique : formule de Haversine.
+      // --------------------------------------------------------
 
+      if (spatialReference.isGeographic) {
 
-      const toRad =
-        Math.PI / 180;
+        const R =
+          6371008.8;
 
+        const toRad =
+          Math.PI / 180;
 
-      const phi1 =
-        lat1 * toRad;
+        const phi1 =
+          y1 * toRad;
 
+        const phi2 =
+          y2 * toRad;
 
-      const phi2 =
-        lat2 * toRad;
+        const deltaPhi =
+          (y2 - y1) * toRad;
 
+        const deltaLambda =
+          (x2 - x1) * toRad;
 
-      const deltaPhi =
-        (
-          lat2 -
-          lat1
-        ) * toRad;
+        const a =
+          Math.sin(deltaPhi / 2) ** 2
+          +
+          Math.cos(phi1)
+          *
+          Math.cos(phi2)
+          *
+          Math.sin(deltaLambda / 2) ** 2;
 
+        const c =
+          2
+          *
+          Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+          );
 
-      const deltaLambda =
-        (
-          lon2 -
-          lon1
-        ) * toRad;
+        return R * c;
+      }
 
+      // --------------------------------------------------------
+      // Cas d'un SCR projeté (Lambert, Web Mercator, etc.).
+      // Le SDK fournit le facteur de conversion vers les mètres.
+      // --------------------------------------------------------
 
-      const a =
+      const dx =
+        x2 - x1;
 
-        Math.sin(
-          deltaPhi / 2
-        ) ** 2
+      const dy =
+        y2 - y1;
 
-        +
+      const metersPerUnit =
+        spatialReference.metersPerUnit || 1;
 
-        Math.cos(
-          phi1
+      return (
+        Math.sqrt(
+          dx * dx +
+          dy * dy
         )
-
         *
-
-        Math.cos(
-          phi2
-        )
-
-        *
-
-        Math.sin(
-          deltaLambda / 2
-        ) ** 2;
-
-
-      const c =
-
-        2 *
-
-        Math.atan2(
-
-          Math.sqrt(a),
-
-          Math.sqrt(
-            1 - a
-          )
-
-        );
-
-
-      return R * c;
+        metersPerUnit
+      );
 
     }
 
 
 
     // ==========================================================
-    // CALCUL DU CAP
+    // CALCUL DU CAP DANS LE SCR DE LA SCÈNE
     // ==========================================================
 
     function bearingDegrees(
-      lon1,
-      lat1,
-      lon2,
-      lat2
+      x1,
+      y1,
+      x2,
+      y2,
+      spatialReference
     ) {
+
+      // --------------------------------------------------------
+      // SCR projeté :
+      // angle horaire depuis le nord.
+      // --------------------------------------------------------
+
+      if (!spatialReference.isGeographic) {
+
+        const dx =
+          x2 - x1;
+
+        const dy =
+          y2 - y1;
+
+        let angle =
+          Math.atan2(
+            dx,
+            dy
+          )
+          *
+          180
+          /
+          Math.PI;
+
+        angle =
+          (angle + 360) % 360;
+
+        return angle;
+      }
+
+      // --------------------------------------------------------
+      // SCR géographique :
+      // calcul géodésique du cap.
+      // --------------------------------------------------------
 
       const toRad =
         Math.PI / 180;
 
-
       const toDeg =
         180 / Math.PI;
 
-
       const phi1 =
-        lat1 * toRad;
-
+        y1 * toRad;
 
       const phi2 =
-        lat2 * toRad;
-
+        y2 * toRad;
 
       const deltaLambda =
-        (
-          lon2 -
-          lon1
-        ) * toRad;
-
+        (x2 - x1) * toRad;
 
       const y =
-
-        Math.sin(
-          deltaLambda
-        )
-
+        Math.sin(deltaLambda)
         *
-
-        Math.cos(
-          phi2
-        );
-
+        Math.cos(phi2);
 
       const x =
-
-        Math.cos(
-          phi1
-        )
-
+        Math.cos(phi1)
         *
-
-        Math.sin(
-          phi2
-        )
-
+        Math.sin(phi2)
         -
-
-        Math.sin(
-          phi1
-        )
-
+        Math.sin(phi1)
         *
-
-        Math.cos(
-          phi2
-        )
-
+        Math.cos(phi2)
         *
-
-        Math.cos(
-          deltaLambda
-        );
-
+        Math.cos(deltaLambda);
 
       let angle =
-
         Math.atan2(
           y,
           x
         )
-
         *
-
         toDeg;
 
-
       angle =
-        (
-          angle +
-          360
-        ) % 360;
-
+        (angle + 360) % 360;
 
       return angle;
 
@@ -950,17 +937,26 @@
 
 
         // ------------------------------------------------------
-        // Les calculs d'animation seront effectués en WGS84.
-        //
-        // Le Z n'est pas demandé.
+        // IMPORTANT :
+        // on demande AxeRoute directement dans le SCR de la
+        // Web Scene. En SceneView 3D, le Graphic du bus doit
+        // utiliser un SCR compatible avec celui de la vue.
         // ------------------------------------------------------
 
-        query.outSpatialReference = {
+        query.outSpatialReference =
+          view.spatialReference;
 
-          wkid:
-            4326
 
-        };
+        console.log(
+          "SCR SceneView WKID :",
+          view.spatialReference.wkid,
+          "latestWkid :",
+          view.spatialReference.latestWkid,
+          "unité :",
+          view.spatialReference.unit,
+          "mètres/unité :",
+          view.spatialReference.metersPerUnit
+        );
 
 
 
@@ -1081,7 +1077,9 @@
               p1[1],
 
               p2[0],
-              p2[1]
+              p2[1],
+
+              view.spatialReference
 
             );
 
@@ -1346,7 +1344,9 @@
               before.lat,
 
               after.lon,
-              after.lat
+              after.lat,
+
+              view.spatialReference
 
             );
 
@@ -1481,18 +1481,14 @@
 
               new Point({
 
-                longitude:
+                x:
                   firstPosition.lon,
 
-                latitude:
+                y:
                   firstPosition.lat,
 
-                spatialReference: {
-
-                  wkid:
-                    4326
-
-                }
+                spatialReference:
+                  view.spatialReference
 
               }),
 
@@ -1511,7 +1507,8 @@
 
 
         console.log(
-          "Bus créé."
+          "Bus créé dans le SCR de la scène :",
+          busGraphic.geometry.spatialReference
         );
 
 
@@ -1707,18 +1704,14 @@
             busGraphic.geometry =
               new Point({
 
-                longitude:
+                x:
                   position.lon,
 
-                latitude:
+                y:
                   position.lat,
 
-                spatialReference: {
-
-                  wkid:
-                    4326
-
-                }
+                spatialReference:
+                  view.spatialReference
 
               });
 
