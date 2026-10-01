@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Saintes - Mobilité 3D</title>
 
+  <!-- Connexions préparées dès l'ouverture pour réduire la latence initiale. -->
+  <link rel="preconnect" href="https://js.arcgis.com" crossorigin />
+  <link rel="preconnect" href="https://saintongeromane.maps.arcgis.com" crossorigin />
+  <link rel="preconnect" href="https://services9.arcgis.com" crossorigin />
+  <link rel="dns-prefetch" href="//js.arcgis.com" />
+  <link rel="dns-prefetch" href="//saintongeromane.maps.arcgis.com" />
+  <link rel="dns-prefetch" href="//services9.arcgis.com" />
+
   <link rel="stylesheet" href="https://js.arcgis.com/5.1/esri/themes/light/main.css" />
   <script type="module" src="https://js.arcgis.com/5.1/"></script>
 
@@ -844,6 +852,31 @@
       let currentIndex =
         0;
 
+      let slideTransitionRunning =
+        false;
+
+      function setSlideButtonsEnabled(
+        enabled
+      ) {
+        prev.disabled =
+          !enabled;
+
+        next.disabled =
+          !enabled;
+
+        prev.style.opacity =
+          enabled ? "1" : "0.55";
+
+        next.style.opacity =
+          enabled ? "1" : "0.55";
+
+        prev.style.cursor =
+          enabled ? "pointer" : "default";
+
+        next.style.cursor =
+          enabled ? "pointer" : "default";
+      }
+
       function updateSlideText(
         slide,
         index
@@ -887,6 +920,19 @@
         index
       ) {
         if (
+          slideTransitionRunning
+        ) {
+          return;
+        }
+
+        slideTransitionRunning =
+          true;
+
+        setSlideButtonsEnabled(
+          false
+        );
+
+        if (
           index < 0
         ) {
           index =
@@ -915,8 +961,17 @@
           ].applyTo(
             view,
             {
+              animate:
+                true,
+
               duration:
-                1800
+                3600,
+
+              maxDuration:
+                5000,
+
+              easing:
+                "cubic-in-out"
             }
           );
 
@@ -932,6 +987,14 @@
           console.warn(
             "Erreur application diapo :",
             error
+          );
+        }
+        finally {
+          slideTransitionRunning =
+            false;
+
+          setSlideButtonsEnabled(
+            true
           );
         }
       }
@@ -989,6 +1052,98 @@
           }
         )
       );
+
+      async function warmSlideLayers() {
+        try {
+          const ids =
+            new Set();
+
+          slideEntries.forEach(
+            function(slide) {
+              slide.visibleLayers?.forEach(
+                function(ref) {
+                  if (
+                    ref?.id
+                  ) {
+                    ids.add(
+                      ref.id
+                    );
+                  }
+                }
+              );
+            }
+          );
+
+          const layers =
+            webscene.allLayers
+              ?
+              webscene.allLayers.toArray()
+              :
+              [];
+
+          const targets =
+            layers.filter(
+              function(layer) {
+                return ids.has(
+                  layer.id
+                );
+              }
+            );
+
+          await Promise.allSettled(
+            targets.map(
+              async function(layer) {
+                try {
+                  await layer.load();
+
+                  await view.whenLayerView(
+                    layer
+                  );
+                }
+                catch (error) {
+                  // Préchargement opportuniste : jamais bloquant.
+                }
+              }
+            )
+          );
+
+          console.log(
+            "Préchargement slides terminé :",
+            targets.length,
+            "couches préparées."
+          );
+        }
+        catch (error) {
+          console.warn(
+            "Préchargement slides ignoré :",
+            error
+          );
+        }
+      }
+
+      const scheduleWarmup =
+        function() {
+          warmSlideLayers();
+        };
+
+      if (
+        "requestIdleCallback"
+        in window
+      ) {
+        window.requestIdleCallback(
+          scheduleWarmup,
+          {
+            timeout:
+              2500
+          }
+        );
+      }
+      else {
+        window.setTimeout(
+          scheduleWarmup,
+          1200
+        );
+      }
     }
 
     // ==========================================================
@@ -1385,6 +1540,77 @@
             return resolved;
           }
         }
+
+        // ------------------------------------------------------
+        // Précharge tous les modèles en parallèle au lieu de les
+        // télécharger l'un après l'autre pendant la création.
+        // ------------------------------------------------------
+
+        const modelsToWarm =
+          new Map();
+
+        for (
+          const feature
+          of result.features
+        ) {
+          const attrs =
+            feature.attributes;
+
+          const id =
+            normalizeId(
+              attrs.ID_VEH
+            );
+
+          const type =
+            normalizeType(
+              attrs.TYPE_V
+            );
+
+          const modelFromField =
+            String(
+              attrs.MODELE ?? ""
+            ).trim();
+
+          const symbolName =
+            modelFromField
+            ||
+            MODEL_BY_ID[id]
+            ||
+            FALLBACK_MODEL_BY_TYPE[type]
+            ||
+            "Taxi";
+
+          if (
+            !modelsToWarm.has(
+              symbolName
+            )
+          ) {
+            modelsToWarm.set(
+              symbolName,
+              type
+            );
+          }
+        }
+
+        await Promise.allSettled(
+          Array.from(
+            modelsToWarm.entries()
+          ).map(
+            function(
+              [symbolName, type]
+            ) {
+              return fetchVehicleSymbol(
+                symbolName,
+                type
+              );
+            }
+          )
+        );
+
+        console.log(
+          "Modèles 3D préchargés en parallèle :",
+          modelsToWarm.size
+        );
 
         // ======================================================
         // CRÉATION DES VÉHICULES
