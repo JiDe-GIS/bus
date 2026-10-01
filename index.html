@@ -1,38 +1,15 @@
 <!doctype html>
 <html lang="fr">
-
 <head>
-
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Saintes - Trafic 3D</title>
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  />
-
-  <title>Saintes - Bus 3D</title>
-
-
-  <!-- =========================================================
-       ARCGIS MAPS SDK FOR JAVASCRIPT 5.1
-       ========================================================= -->
-
-  <link
-    rel="stylesheet"
-    href="https://js.arcgis.com/5.1/esri/themes/light/main.css"
-  />
-
-  <script
-    type="module"
-    src="https://js.arcgis.com/5.1/"
-  ></script>
-
+  <link rel="stylesheet" href="https://js.arcgis.com/5.1/esri/themes/light/main.css" />
+  <script type="module" src="https://js.arcgis.com/5.1/"></script>
 
   <style>
-
-    html,
-    body,
-    #viewDiv {
+    html, body, #viewDiv {
       padding: 0;
       margin: 0;
       width: 100%;
@@ -40,122 +17,44 @@
       overflow: hidden;
     }
 
-
     #info {
-
       position: absolute;
-
       top: 15px;
       left: 70px;
-
       z-index: 100;
-
-      min-width: 220px;
-
+      min-width: 245px;
       padding: 12px 16px;
-
-      background:
-        rgba(255, 255, 255, 0.92);
-
+      background: rgba(255, 255, 255, 0.92);
       border-radius: 8px;
-
-      box-shadow:
-        0 2px 8px
-        rgba(0, 0, 0, 0.18);
-
-      font-family:
-        "Avenir Next",
-        Avenir,
-        Arial,
-        sans-serif;
-
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      font-family: "Avenir Next", Avenir, Arial, sans-serif;
       font-size: 14px;
-
     }
-
 
     #title {
-
       font-size: 17px;
-
-      font-weight: bold;
-
+      font-weight: 700;
       margin-bottom: 6px;
-
     }
-
-
-    #speed {
-
-      margin-bottom: 4px;
-
-    }
-
 
     #status {
-
       color: #555;
-
       font-size: 13px;
-
     }
-
-
-    #status.error {
-
-      color: #b00020;
-
-      font-weight: bold;
-
-    }
-
 
     #status.ok {
-
       color: #237804;
-
     }
 
+    #status.error {
+      color: #b00020;
+      font-weight: 700;
+    }
   </style>
 
-</head>
-
-
-<body>
-
-
-  <!-- =========================================================
-       SCÈNE
-       ========================================================= -->
-
-  <div id="viewDiv"></div>
-
-
-  <!-- =========================================================
-       INFORMATIONS
-       ========================================================= -->
-
-  <div id="info">
-
-    <div id="title">
-      Bus Saintes
-    </div>
-
-    <div id="speed">
-      Vitesse : 30 km/h
-    </div>
-
-    <div id="status">
-      Initialisation...
-    </div>
-
-  </div>
-
-
-
   <script>
-    // Supprime les paramètres de suivi ajoutés à l'URL (ex. utm_source)
-    // sans toucher aux paramètres OAuth "code" et "state".
+    // Nettoie uniquement les paramètres de suivi ajoutés à l'URL.
+    // On conserve code/state lors du retour OAuth.
     (() => {
       const url = new URL(window.location.href);
       let changed = false;
@@ -168,409 +67,223 @@
       }
 
       if (changed) {
-        const cleanUrl =
-          url.pathname +
-          (url.search ? url.search : "") +
-          url.hash;
-
-        window.history.replaceState({}, document.title, cleanUrl);
+        window.history.replaceState(
+          {},
+          document.title,
+          url.pathname + (url.search || "") + url.hash
+        );
       }
     })();
   </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+
+  <div id="info">
+    <div id="title">Mobilité 3D — Saintes</div>
+    <div id="status">Initialisation...</div>
+  </div>
 
   <script type="module">
-
-
     // ==========================================================
     // CONFIGURATION
     // ==========================================================
 
-
     const PORTAL_URL =
       "https://saintongeromane.maps.arcgis.com";
-
-
-    // ----------------------------------------------------------
-    // IMPORTANT
-    // ----------------------------------------------------------
-    //
-    // Remplacer cette valeur après création de l'application
-    // OAuth dans ArcGIS Online.
-    //
-    // NE JAMAIS mettre de Client Secret ici.
-    //
-    // ----------------------------------------------------------
 
     const CLIENT_ID =
       "uVV1afs1BldtPI0l";
 
-
-    // ----------------------------------------------------------
-    // WEB SCENE SAINTES
-    // ----------------------------------------------------------
-
     const WEBSCENE_ID =
       "a874e00cced24ca6becd5f307189fcb3";
-
-
-    // ----------------------------------------------------------
-    // AXE ROUTE
-    //
-    // On utilise l'ITEM ID plutôt que directement l'URL REST.
-    //
-    // C'est préférable ici car la donnée est privée.
-    // ----------------------------------------------------------
 
     const AXE_ROUTE_ITEM_ID =
       "1328f11571aa43c4a62aec9c43f5824f";
 
-
-    // ----------------------------------------------------------
-    // BUS 3D ESRI
-    //
-    // On utilise le symbole officiel "Bus" du web style
-    // EsriRealisticTransportationStyle.
-    //
-    // Avantage : pas de GLB externe ni d'extension glTF
-    // potentiellement incompatible avec le SDK.
-    // ----------------------------------------------------------
-
-    const BUS_WEB_STYLE_NAME =
+    const WEB_STYLE =
       "EsriRealisticTransportationStyle";
 
-    const BUS_WEB_STYLE_SYMBOL =
-      "Bus";
-
-
-    // ----------------------------------------------------------
-    // VITESSE
-    // ----------------------------------------------------------
-
-    const SPEED_KMH =
-      30;
-
-
-    // Conversion km/h -> m/s
-
-    const SPEED_MS =
-      SPEED_KMH / 3.6;
-
-
-    // ----------------------------------------------------------
-    // HAUTEUR PAR RAPPORT AU MESH
-    // ----------------------------------------------------------
-    //
-    // Si le bus semble légèrement enterré :
-    //
-    // essayer 0.20
-    // puis 0.30
-    //
-    // ----------------------------------------------------------
-
-    const BUS_VERTICAL_OFFSET =
+    // Véhicules routiers : posé sur Ground / Integrated Mesh.
+    const ROAD_VERTICAL_OFFSET =
       0.10;
 
+    // Bateau : couche séparée.
+    // relative-to-scene recherche d'abord les surfaces 3D de la scène.
+    const BOAT_VERTICAL_OFFSET =
+      0.30;
 
-    // ----------------------------------------------------------
-    // ORIENTATION DU MODÈLE
-    // ----------------------------------------------------------
-    //
-    // Si le bus roule :
-    //
-    // - à l'envers : mettre 180
-    // - de côté : essayer 90 ou -90
-    //
-    // ----------------------------------------------------------
-
-    const MODEL_HEADING_OFFSET =
-      0;
-
-
-    // ----------------------------------------------------------
-    // LISSAGE DES VIRAGES
-    // ----------------------------------------------------------
-    //
-    // Le cap est calculé entre un point quelques mètres avant
-    // et un point quelques mètres après le bus.
-    //
-    // Cela évite les changements d'angle brutaux à chaque sommet.
-    //
-    // ----------------------------------------------------------
-
+    // Distance utilisée pour lisser l'orientation dans les virages.
     const HEADING_LOOK_AHEAD_METERS =
       4;
 
+    // Mapping par ID_VEH.
+    // MODELE reste prioritaire si tu renseignes plus tard ce champ.
+    const MODEL_BY_ID = {
+      "01": "Bus",
+      "02": "Audi_A6",
+      "03": "BMW_3-Series",
+      "04": "Ford_Edge",
+      "05": "Semi_Trailer_Truck",
+      "06": "Ford_Fiesta",
+      "07": "Bus",
+      "08": "Ford_Focus_Hatchback",
+      "09": "Ford_Fusion",
+      "10": "Ford_Mustang",
+      "11": "Mercedes_S-Class",
+      "12": "Toyota_Prius",
+      "13": "Motorboat"
+    };
 
+    const FALLBACK_MODEL_BY_TYPE = {
+      "CAR": "Taxi",
+      "BUS": "Bus",
+      "TRUCK": "Delivery_Truck",
+      "BOAT": "Motorboat"
+    };
 
     // ==========================================================
-    // AFFICHAGE ÉTAT
+    // ÉTAT UI
     // ==========================================================
 
-    function setStatus(
-      message,
-      type = ""
-    ) {
-
-      const element =
-        document.getElementById(
-          "status"
-        );
-
-
-      element.innerText =
-        message;
-
-
-      element.className =
-        type;
-
+    function setStatus(message, type = "") {
+      const element = document.getElementById("status");
+      element.innerText = message;
+      element.className = type;
     }
 
-
-
     // ==========================================================
-    // VÉRIFICATION CLIENT ID
-    // ==========================================================
-
-    if (
-      CLIENT_ID ===
-      "A_REMPLACER_PAR_TON_CLIENT_ID"
-    ) {
-
-      setStatus(
-        "Client ID OAuth à renseigner",
-        "error"
-      );
-
-
-      console.warn(
-        "CLIENT_ID OAuth non renseigné."
-      );
-
-
-      throw new Error(
-        "CLIENT_ID OAuth non renseigné."
-      );
-
-    }
-
-
-
-    // ==========================================================
-    // IMPORT DES MODULES ARCGIS
+    // IMPORTS
     // ==========================================================
 
     const [
-
       esriConfig,
-
       OAuthInfo,
-
       identityManager,
-
       WebScene,
-
       SceneView,
-
       FeatureLayer,
-
       GraphicsLayer,
-
       Graphic,
-
       Point,
-
       WebStyleSymbol
-
     ] = await $arcgis.import([
-
       "@arcgis/core/config.js",
-
       "@arcgis/core/identity/OAuthInfo.js",
-
       "@arcgis/core/identity/IdentityManager.js",
-
       "@arcgis/core/WebScene.js",
-
       "@arcgis/core/views/SceneView.js",
-
       "@arcgis/core/layers/FeatureLayer.js",
-
       "@arcgis/core/layers/GraphicsLayer.js",
-
       "@arcgis/core/Graphic.js",
-
       "@arcgis/core/geometry/Point.js",
-
       "@arcgis/core/symbols/WebStyleSymbol.js"
-
     ]);
-
-
-
-    // ==========================================================
-    // PORTAIL ARCGIS ONLINE
-    // ==========================================================
 
     esriConfig.portalUrl =
       PORTAL_URL;
 
-
-
     // ==========================================================
-    // AUTHENTIFICATION OAUTH
+    // OAUTH
     // ==========================================================
-
-    console.log(
-      "Configuration OAuth..."
-    );
-
 
     const oauthInfo =
       new OAuthInfo({
-
-        appId:
-          CLIENT_ID,
-
-        portalUrl:
-          PORTAL_URL,
-
-
-        // ------------------------------------------------------
-        // false =
-        //
-        // redirection de la page entière vers ArcGIS Online,
-        // puis retour sur GitHub Pages.
-        //
-        // Avantage :
-        //
-        // pas besoin d'un deuxième fichier
-        // oauth-callback.html
-        //
-        // ------------------------------------------------------
-
-        popup:
-          false,
-
-
-        // OAuth moderne / PKCE lorsque disponible
-
-        flowType:
-          "auto",
-
-
-        preserveUrlHash:
-          true
-
+        appId: CLIENT_ID,
+        portalUrl: PORTAL_URL,
+        popup: false,
+        flowType: "auto",
+        preserveUrlHash: true
       });
-
 
     identityManager.registerOAuthInfos([
       oauthInfo
     ]);
 
-
-
-    // ==========================================================
-    // AUTHENTIFICATION UTILISATEUR
-    // ==========================================================
-
     async function authenticate() {
-
       try {
-
         setStatus(
           "Vérification de la connexion..."
         );
 
-
-        console.log(
-          "Vérification connexion ArcGIS Online..."
-        );
-
-
         try {
-
-          // ----------------------------------------------------
-          // Vérifie si une session OAuth existe déjà.
-          // ----------------------------------------------------
-
-          await identityManager
-            .checkSignInStatus(
-              PORTAL_URL +
-              "/sharing"
-            );
-
+          await identityManager.checkSignInStatus(
+            PORTAL_URL + "/sharing"
+          );
 
           console.log(
             "Utilisateur déjà authentifié."
           );
-
-
         }
-
-        catch (signInError) {
-
+        catch (error) {
           console.log(
             "Authentification nécessaire."
           );
-
 
           setStatus(
             "Connexion ArcGIS Online..."
           );
 
-
-          // ----------------------------------------------------
-          // Déclenche OAuth.
-          //
-          // La page sera redirigée vers ArcGIS Online.
-          // ----------------------------------------------------
-
-          await identityManager
-            .getCredential(
-              PORTAL_URL +
-              "/sharing"
-            );
-
+          await identityManager.getCredential(
+            PORTAL_URL + "/sharing"
+          );
         }
 
+        // Nettoyage visuel code/state après validation OAuth.
+        const url =
+          new URL(window.location.href);
 
-        setStatus(
-          "Connecté à ArcGIS Online",
-          "ok"
-        );
+        if (
+          url.searchParams.has("code") ||
+          url.searchParams.has("state")
+        ) {
+          url.searchParams.delete("code");
+          url.searchParams.delete("state");
 
+          window.history.replaceState(
+            {},
+            document.title,
+            url.pathname + (url.search || "") + url.hash
+          );
+        }
 
         return true;
-
       }
-
       catch (error) {
-
         console.error(
           "Erreur authentification :",
           error
         );
-
 
         setStatus(
           "Erreur authentification",
           "error"
         );
 
-
         throw error;
-
       }
-
     }
 
-
-
     // ==========================================================
-    // DISTANCE ENTRE DEUX POINTS DANS LE SCR DE LA SCÈNE
+    // OUTILS GÉOMÉTRIQUES
     // ==========================================================
+
+    function normalizeId(value) {
+      return String(
+        value ?? ""
+      )
+        .trim()
+        .padStart(2, "0");
+    }
+
+    function normalizeType(value) {
+      return String(
+        value ?? ""
+      )
+        .trim()
+        .toUpperCase();
+    }
 
     function distanceMeters(
       x1,
@@ -579,13 +292,9 @@
       y2,
       spatialReference
     ) {
-
-      // --------------------------------------------------------
-      // Cas d'un SCR géographique : formule de Haversine.
-      // --------------------------------------------------------
-
-      if (spatialReference.isGeographic) {
-
+      if (
+        spatialReference.isGeographic
+      ) {
         const R =
           6371008.8;
 
@@ -624,11 +333,6 @@
         return R * c;
       }
 
-      // --------------------------------------------------------
-      // Cas d'un SCR projeté (Lambert, Web Mercator, etc.).
-      // Le SDK fournit le facteur de conversion vers les mètres.
-      // --------------------------------------------------------
-
       const dx =
         x2 - x1;
 
@@ -646,14 +350,7 @@
         *
         metersPerUnit
       );
-
     }
-
-
-
-    // ==========================================================
-    // CALCUL DU CAP DANS LE SCR DE LA SCÈNE
-    // ==========================================================
 
     function bearingDegrees(
       x1,
@@ -662,14 +359,9 @@
       y2,
       spatialReference
     ) {
-
-      // --------------------------------------------------------
-      // SCR projeté :
-      // angle horaire depuis le nord.
-      // --------------------------------------------------------
-
-      if (!spatialReference.isGeographic) {
-
+      if (
+        !spatialReference.isGeographic
+      ) {
         const dx =
           x2 - x1;
 
@@ -686,16 +378,11 @@
           /
           Math.PI;
 
-        angle =
-          (angle + 360) % 360;
-
-        return angle;
+        return (
+          angle +
+          360
+        ) % 360;
       }
-
-      // --------------------------------------------------------
-      // SCR géographique :
-      // calcul géodésique du cap.
-      // --------------------------------------------------------
 
       const toRad =
         Math.PI / 180;
@@ -736,112 +423,250 @@
         *
         toDeg;
 
-      angle =
-        (angle + 360) % 360;
-
-      return angle;
-
+      return (
+        angle +
+        360
+      ) % 360;
     }
 
+    function shortestAngleDelta(
+      from,
+      to
+    ) {
+      return (
+        (
+          to -
+          from +
+          540
+        ) % 360
+      ) - 180;
+    }
 
+    function buildRoute(
+      path,
+      spatialReference
+    ) {
+      const segments = [];
+      let totalLength = 0;
+
+      for (
+        let i = 0;
+        i < path.length - 1;
+        i++
+      ) {
+        const p1 =
+          path[i];
+
+        const p2 =
+          path[i + 1];
+
+        const length =
+          distanceMeters(
+            p1[0],
+            p1[1],
+            p2[0],
+            p2[1],
+            spatialReference
+          );
+
+        if (
+          length <= 0.001
+        ) {
+          continue;
+        }
+
+        segments.push({
+          p1,
+          p2,
+          length,
+          startDistance:
+            totalLength
+        });
+
+        totalLength +=
+          length;
+      }
+
+      return {
+        segments,
+        totalLength
+      };
+    }
+
+    function pointAtDistance(
+      route,
+      distance
+    ) {
+      distance =
+        Math.max(
+          0,
+          Math.min(
+            route.totalLength,
+            distance
+          )
+        );
+
+      let segment =
+        route.segments[
+          route.segments.length - 1
+        ];
+
+      for (
+        const candidate
+        of route.segments
+      ) {
+        if (
+          distance >=
+            candidate.startDistance
+          &&
+          distance <=
+            candidate.startDistance +
+            candidate.length
+        ) {
+          segment =
+            candidate;
+          break;
+        }
+      }
+
+      const localDistance =
+        distance -
+        segment.startDistance;
+
+      const t =
+        Math.max(
+          0,
+          Math.min(
+            1,
+            localDistance /
+            segment.length
+          )
+        );
+
+      return {
+        x:
+          segment.p1[0]
+          +
+          (
+            segment.p2[0] -
+            segment.p1[0]
+          )
+          *
+          t,
+
+        y:
+          segment.p1[1]
+          +
+          (
+            segment.p2[1] -
+            segment.p1[1]
+          )
+          *
+          t
+      };
+    }
+
+    function smoothHeading(
+      route,
+      distance,
+      spatialReference
+    ) {
+      const beforeDistance =
+        Math.max(
+          0,
+          distance -
+          HEADING_LOOK_AHEAD_METERS
+        );
+
+      const afterDistance =
+        Math.min(
+          route.totalLength,
+          distance +
+          HEADING_LOOK_AHEAD_METERS
+        );
+
+      const before =
+        pointAtDistance(
+          route,
+          beforeDistance
+        );
+
+      const after =
+        pointAtDistance(
+          route,
+          afterDistance
+        );
+
+      return bearingDegrees(
+        before.x,
+        before.y,
+        after.x,
+        after.y,
+        spatialReference
+      );
+    }
 
     // ==========================================================
     // PROGRAMME PRINCIPAL
     // ==========================================================
 
     async function main() {
-
-
       try {
-
-
-        // ======================================================
-        // AUTHENTIFICATION
-        // ======================================================
-
         await authenticate();
-
-
-
-        // ======================================================
-        // WEB SCENE
-        // ======================================================
 
         setStatus(
           "Chargement de Saintes..."
         );
 
-
-        console.log(
-          "Chargement WebScene :",
-          WEBSCENE_ID
-        );
-
-
         const webscene =
           new WebScene({
-
             portalItem: {
-
               id:
                 WEBSCENE_ID
-
             }
-
           });
 
+        // ------------------------------------------------------
+        // Deux couches graphiques :
+        // - route : voitures, bus, camion
+        // - bateau : placement vertical indépendant
+        // ------------------------------------------------------
 
-
-        // ======================================================
-        // COUCHE DU BUS
-        // ======================================================
-
-        const busLayer =
+        const roadVehicleLayer =
           new GraphicsLayer({
-
             title:
-              "Bus animé",
-
+              "Véhicules animés",
 
             elevationInfo: {
-
-              // ------------------------------------------------
-              // IMPORTANT POUR TON MESH
-              //
-              // ArcGIS va positionner le point relativement :
-              //
-              // - au Ground
-              // OU
-              // - à l'Integrated Mesh
-              //
-              // Aucun Z n'est nécessaire sur AxeRoute.
-              // ------------------------------------------------
-
               mode:
                 "relative-to-ground",
 
-
               offset:
-                BUS_VERTICAL_OFFSET
-
+                ROAD_VERTICAL_OFFSET
             }
-
           });
 
+        const boatLayer =
+          new GraphicsLayer({
+            title:
+              "Bateau animé",
 
-        webscene.add(
-          busLayer
-        );
+            elevationInfo: {
+              mode:
+                "relative-to-scene",
 
+              offset:
+                BOAT_VERTICAL_OFFSET
+            }
+          });
 
-
-        // ======================================================
-        // SCENE VIEW
-        // ======================================================
+        webscene.addMany([
+          roadVehicleLayer,
+          boatLayer
+        ]);
 
         const view =
           new SceneView({
-
             container:
               "viewDiv",
 
@@ -850,103 +675,13 @@
 
             qualityProfile:
               "high"
-
           });
 
-
-
-        // ======================================================
-        // CHARGEMENT SCÈNE
-        // ======================================================
-
         await view.when();
-
 
         console.log(
           "WebScene chargée."
         );
-
-
-        console.log(
-          "Spatial Reference :",
-          view.spatialReference
-        );
-
-
-
-        // ======================================================
-        // AXE ROUTE PRIVÉ
-        // ======================================================
-
-        setStatus(
-          "Chargement de l'axe..."
-        );
-
-
-        const axeLayer =
-          new FeatureLayer({
-
-            portalItem: {
-
-              id:
-                AXE_ROUTE_ITEM_ID
-
-            },
-
-
-            layerId:
-              0,
-
-
-            outFields: [
-              "*"
-            ]
-
-          });
-
-
-
-        await axeLayer.load();
-
-
-        console.log(
-          "AxeRoute chargé."
-        );
-
-
-
-        // ======================================================
-        // REQUÊTE AXE
-        // ======================================================
-
-        const query =
-          axeLayer.createQuery();
-
-
-        query.where =
-          "1=1";
-
-
-        query.returnGeometry =
-          true;
-
-
-        query.outFields =
-          [
-            "*"
-          ];
-
-
-        // ------------------------------------------------------
-        // IMPORTANT :
-        // on demande AxeRoute directement dans le SCR de la
-        // Web Scene. En SceneView 3D, le Graphic du bus doit
-        // utiliser un SCR compatible avec celui de la vue.
-        // ------------------------------------------------------
-
-        query.outSpatialReference =
-          view.spatialReference;
-
 
         console.log(
           "SCR SceneView WKID :",
@@ -959,979 +694,582 @@
           view.spatialReference.metersPerUnit
         );
 
+        // ======================================================
+        // AXEROUTE
+        // ======================================================
 
-
-        const result =
-          await axeLayer
-            .queryFeatures(
-              query
-            );
-
-
-        console.log(
-          "Nombre d'axes :",
-          result.features.length
+        setStatus(
+          "Chargement des itinéraires..."
         );
 
+        const axeLayer =
+          new FeatureLayer({
+            portalItem: {
+              id:
+                AXE_ROUTE_ITEM_ID
+            },
 
+            layerId:
+              0,
+
+            outFields: [
+              "ID_VEH",
+              "TYPE_V",
+              "MODELE",
+              "VITESSE",
+              "DEPART_PC",
+              "ACTIF"
+            ]
+          });
+
+        await axeLayer.load();
+
+        const query =
+          axeLayer.createQuery();
+
+        query.where =
+          "ACTIF = 1";
+
+        query.returnGeometry =
+          true;
+
+        query.outFields = [
+          "ID_VEH",
+          "TYPE_V",
+          "MODELE",
+          "VITESSE",
+          "DEPART_PC",
+          "ACTIF"
+        ];
+
+        query.outSpatialReference =
+          view.spatialReference;
+
+        const result =
+          await axeLayer.queryFeatures(
+            query
+          );
+
+        console.log(
+          "Véhicules actifs trouvés :",
+          result.features.length
+        );
 
         if (
           result.features.length === 0
         ) {
-
           throw new Error(
-            "Aucune entité trouvée dans AxeRoute."
+            "Aucun véhicule ACTIF = 1 dans AxeRoute."
           );
-
         }
 
-
-
         // ======================================================
-        // TON UNIQUE AXE
+        // CACHE DES MODÈLES ESRI
         // ======================================================
 
-        const routeFeature =
-          result.features[0];
+        const symbolCache =
+          new Map();
 
-
-        const routeGeometry =
-          routeFeature.geometry;
-
-
-
-        if (
-          !routeGeometry.paths ||
-          routeGeometry.paths.length === 0
+        async function fetchVehicleSymbol(
+          symbolName,
+          type
         ) {
+          if (
+            symbolCache.has(
+              symbolName
+            )
+          ) {
+            return symbolCache
+              .get(symbolName)
+              .clone();
+          }
 
-          throw new Error(
-            "AxeRoute ne contient aucune polyline."
-          );
+          try {
+            const webStyleSymbol =
+              new WebStyleSymbol({
+                styleName:
+                  WEB_STYLE,
 
+                name:
+                  symbolName
+              });
+
+            const resolved =
+              await webStyleSymbol
+                .fetchSymbol();
+
+            symbolCache.set(
+              symbolName,
+              resolved.clone()
+            );
+
+            return resolved;
+          }
+          catch (error) {
+            console.warn(
+              "Modèle introuvable :",
+              symbolName,
+              "=> fallback",
+              error
+            );
+
+            const fallbackName =
+              FALLBACK_MODEL_BY_TYPE[type]
+              ||
+              "Taxi";
+
+            const fallback =
+              new WebStyleSymbol({
+                styleName:
+                  WEB_STYLE,
+
+                name:
+                  fallbackName
+              });
+
+            const resolved =
+              await fallback.fetchSymbol();
+
+            symbolCache.set(
+              fallbackName,
+              resolved.clone()
+            );
+
+            return resolved;
+          }
         }
 
-
-
-        const path =
-          routeGeometry.paths[0];
-
-
-
-        if (
-          path.length < 2
-        ) {
-
-          throw new Error(
-            "AxeRoute doit posséder au minimum deux sommets."
-          );
-
-        }
-
-
-
-        console.log(
-          "Nombre de sommets :",
-          path.length
-        );
-
-
-
         // ======================================================
-        // PRÉCALCUL DES SEGMENTS
+        // CRÉATION DE TOUS LES VÉHICULES
         // ======================================================
 
-        const segments =
+        const vehicles =
           [];
 
-
-        let totalLength =
-          0;
-
-
-
         for (
-
-          let i = 0;
-
-          i <
-          path.length - 1;
-
-          i++
-
+          const feature
+          of result.features
         ) {
+          try {
+            const attrs =
+              feature.attributes;
 
+            const id =
+              normalizeId(
+                attrs.ID_VEH
+              );
 
-          const p1 =
-            path[i];
+            const type =
+              normalizeType(
+                attrs.TYPE_V
+              );
 
-
-          const p2 =
-            path[i + 1];
-
-
-
-          const length =
-            distanceMeters(
-
-              p1[0],
-              p1[1],
-
-              p2[0],
-              p2[1],
-
-              view.spatialReference
-
-            );
-
-
-
-          // Ignore éventuellement
-          // un segment totalement nul.
-
-          if (
-            length <= 0.001
-          ) {
-
-            continue;
-
-          }
-
-
-
-          segments.push({
-
-            p1:
-              p1,
-
-            p2:
-              p2,
-
-            length:
-              length,
-
-            startDistance:
-              totalLength
-
-          });
-
-
-
-          totalLength +=
-            length;
-
-        }
-
-
-
-        if (
-          totalLength <= 0
-        ) {
-
-          throw new Error(
-            "Longueur de l'axe nulle."
-          );
-
-        }
-
-
-
-        console.log(
-          "Longueur AxeRoute :",
-          totalLength.toFixed(2),
-          "m"
-        );
-
-
-        console.log(
-          "Temps aller à 30 km/h :",
-          (
-            totalLength /
-            SPEED_MS
-          ).toFixed(1),
-          "secondes"
-        );
-
-
-
-        // ======================================================
-        // POSITION À UNE DISTANCE DONNÉE SUR L'AXE
-        // ======================================================
-
-        function pointAtDistance(
-          distance
-        ) {
-
-
-          // Bloque la valeur sur l'axe.
-
-          distance =
-            Math.max(
-              0,
-              Math.min(
-                totalLength,
-                distance
-              )
-            );
-
-
-
-          let segment =
-            segments[
-              segments.length - 1
-            ];
-
-
-
-          for (
-            const candidate
-            of segments
-          ) {
-
+            const geometry =
+              feature.geometry;
 
             if (
-
-              distance >=
-                candidate.startDistance
-
-              &&
-
-              distance <=
-                candidate.startDistance +
-                candidate.length
-
+              !geometry?.paths?.length
+              ||
+              geometry.paths[0].length < 2
             ) {
-
-
-              segment =
-                candidate;
-
-
-              break;
-
+              console.warn(
+                "Route ignorée, géométrie invalide :",
+                id
+              );
+              continue;
             }
 
-          }
+            if (
+              geometry.paths.length > 1
+            ) {
+              console.warn(
+                "Route multipart : seul le premier path est utilisé :",
+                id
+              );
+            }
 
+            const route =
+              buildRoute(
+                geometry.paths[0],
+                view.spatialReference
+              );
 
+            if (
+              route.totalLength <= 0
+            ) {
+              console.warn(
+                "Route de longueur nulle :",
+                id
+              );
+              continue;
+            }
 
-          const localDistance =
+            const modelFromField =
+              String(
+                attrs.MODELE ?? ""
+              ).trim();
 
-            distance -
-            segment.startDistance;
+            const symbolName =
+              modelFromField
+              ||
+              MODEL_BY_ID[id]
+              ||
+              FALLBACK_MODEL_BY_TYPE[type]
+              ||
+              "Taxi";
 
+            const speedKmhRaw =
+              Number(
+                attrs.VITESSE
+              );
 
-
-          const t =
-
-            Math.max(
-
-              0,
-
-              Math.min(
-
-                1,
-
-                localDistance /
-                segment.length
-
+            const speedKmh =
+              Number.isFinite(
+                speedKmhRaw
               )
-
-            );
-
-
-
-          const lon =
-
-            segment.p1[0]
-
-            +
-
-            (
-              segment.p2[0] -
-              segment.p1[0]
-            )
-
-            *
-
-            t;
-
-
-
-          const lat =
-
-            segment.p1[1]
-
-            +
-
-            (
-              segment.p2[1] -
-              segment.p1[1]
-            )
-
-            *
-
-            t;
-
-
-
-          return {
-
-            lon:
-              lon,
-
-            lat:
-              lat
-
-          };
-
-        }
-
-
-
-        // ======================================================
-        // CAP LISSÉ
-        // ======================================================
-
-        function smoothHeading(
-          distance,
-          reverse
-        ) {
-
-
-          const beforeDistance =
-
-            Math.max(
-
-              0,
-
-              distance -
-              HEADING_LOOK_AHEAD_METERS
-
-            );
-
-
-
-          const afterDistance =
-
-            Math.min(
-
-              totalLength,
-
-              distance +
-              HEADING_LOOK_AHEAD_METERS
-
-            );
-
-
-
-          const before =
-            pointAtDistance(
-              beforeDistance
-            );
-
-
-          const after =
-            pointAtDistance(
-              afterDistance
-            );
-
-
-
-          let heading =
-            bearingDegrees(
-
-              before.lon,
-              before.lat,
-
-              after.lon,
-              after.lat,
-
-              view.spatialReference
-
-            );
-
-
-
-          // ----------------------------------------------------
-          // Si le bus revient dans l'autre sens :
-          // rotation de 180°.
-          // ----------------------------------------------------
-
-          if (
-            reverse
-          ) {
-
-            heading =
+              &&
+              speedKmhRaw > 0
+              ?
+              speedKmhRaw
+              :
               (
-                heading +
-                180
-              ) % 360;
+                type === "BOAT"
+                ? 15
+                : 30
+              );
 
+            const departPcRaw =
+              Number(
+                attrs.DEPART_PC
+              );
+
+            const departPc =
+              Number.isFinite(
+                departPcRaw
+              )
+              ?
+              Math.max(
+                0,
+                Math.min(
+                  100,
+                  departPcRaw
+                )
+              )
+              :
+              0;
+
+            const startDistance =
+              route.totalLength
+              *
+              departPc
+              /
+              100;
+
+            const position =
+              pointAtDistance(
+                route,
+                startDistance
+              );
+
+            const initialHeading =
+              smoothHeading(
+                route,
+                startDistance,
+                view.spatialReference
+              );
+
+            const symbol =
+              (
+                await fetchVehicleSymbol(
+                  symbolName,
+                  type
+                )
+              ).clone();
+
+            if (
+              !symbol.symbolLayers
+              ||
+              symbol.symbolLayers.length === 0
+            ) {
+              console.warn(
+                "Symbole sans symbolLayer :",
+                id,
+                symbolName
+              );
+              continue;
+            }
+
+            const objectLayer =
+              symbol.symbolLayers
+                .getItemAt(0);
+
+            objectLayer.heading =
+              initialHeading;
+
+            objectLayer.castShadows =
+              true;
+
+            const graphic =
+              new Graphic({
+                geometry:
+                  new Point({
+                    x:
+                      position.x,
+
+                    y:
+                      position.y,
+
+                    spatialReference:
+                      view.spatialReference
+                  }),
+
+                symbol:
+                  symbol,
+
+                attributes: {
+                  ID_VEH:
+                    id,
+
+                  TYPE_V:
+                    type,
+
+                  MODELE:
+                    symbolName,
+
+                  VITESSE:
+                    speedKmh
+                }
+              });
+
+            const targetLayer =
+              type === "BOAT"
+              ?
+              boatLayer
+              :
+              roadVehicleLayer;
+
+            targetLayer.add(
+              graphic
+            );
+
+            vehicles.push({
+              id,
+              type,
+              symbolName,
+              speedKmh,
+              speedMs:
+                speedKmh / 3.6,
+              route,
+              startDistance,
+              graphic,
+              lastRenderedHeading:
+                initialHeading
+            });
+
+            console.log(
+              "Créé :",
+              id,
+              type,
+              symbolName,
+              speedKmh + " km/h",
+              "longueur route :",
+              route.totalLength.toFixed(1) + " m"
+            );
           }
-
-
-
-          heading =
-            (
-              heading +
-              MODEL_HEADING_OFFSET
-            ) % 360;
-
-
-
-          return heading;
-
+          catch (vehicleError) {
+            console.error(
+              "Erreur création véhicule :",
+              feature.attributes,
+              vehicleError
+            );
+          }
         }
-
-
-
-        // ======================================================
-        // MODÈLE 3D DU BUS
-        // ======================================================
-
-        setStatus(
-          "Chargement du bus 3D Esri..."
-        );
-
-
-        console.log(
-          "Chargement du WebStyleSymbol :",
-          BUS_WEB_STYLE_NAME,
-          "/",
-          BUS_WEB_STYLE_SYMBOL
-        );
-
-
-        const busWebStyle =
-          new WebStyleSymbol({
-
-            styleName:
-              BUS_WEB_STYLE_NAME,
-
-            name:
-              BUS_WEB_STYLE_SYMBOL
-
-          });
-
-
-        // ------------------------------------------------------
-        // fetchSymbol() récupère le vrai PointSymbol3D Esri.
-        // On clone le symbole avant de modifier son orientation.
-        // ------------------------------------------------------
-
-        const fetchedBusSymbol =
-          await busWebStyle.fetchSymbol();
-
-
-        const busSymbol =
-          fetchedBusSymbol.clone();
-
 
         if (
-          !busSymbol.symbolLayers ||
-          busSymbol.symbolLayers.length === 0
+          vehicles.length === 0
         ) {
-
           throw new Error(
-            "Le symbole 3D Esri 'Bus' ne contient aucun symbolLayer."
+            "Aucun véhicule n'a pu être créé."
           );
-
         }
 
-
-        const busObject =
-          busSymbol.symbolLayers.getItemAt(
-            0
-          );
-
-
-        // Ombres du modèle 3D.
-        busObject.castShadows =
-          true;
-
-
-        console.log(
-          "Bus WebStyle Esri chargé :",
-          busObject
-        );
-
-
-
         // ======================================================
-        // POSITION INITIALE
+        // ROTATION 3D
         // ======================================================
 
-        const firstPosition =
-          pointAtDistance(
-            0
-          );
-
-
-
-        // ------------------------------------------------------
-        // Orientation initiale du bus.
-        //
-        // IMPORTANT :
-        // pour forcer le rafraîchissement du symbole 3D dans
-        // GraphicsLayer, on réaffecte un clone du symbole au
-        // Graphic lorsqu'on change le heading.
-        // ------------------------------------------------------
-
-        const initialHeading =
-          smoothHeading(
-            0,
-            false
-          );
-
-
-        busObject.heading =
-          initialHeading;
-
-
-
-        const busGraphic =
-          new Graphic({
-
-            geometry:
-
-              new Point({
-
-                x:
-                  firstPosition.lon,
-
-                y:
-                  firstPosition.lat,
-
-                spatialReference:
-                  view.spatialReference
-
-              }),
-
-
-            symbol:
-              busSymbol
-
-          });
-
-
-
-        busLayer.add(
-          busGraphic
-        );
-
-
-        // ======================================================
-        // MISE À JOUR FORCÉE DE L'ORIENTATION 3D
-        // ======================================================
-        //
-        // Modifier seulement busObject.heading ne suffit pas
-        // toujours à déclencher le redraw d'un Graphic 3D.
-        //
-        // On clone donc le symbole, modifie son heading, puis
-        // le réaffecte au Graphic. Pour un seul bus, le coût est
-        // négligeable et le rendu est fiable.
-        // ======================================================
-
-        let lastRenderedHeading =
-          initialHeading;
-
-
-        function shortestAngleDelta(
-          from,
-          to
-        ) {
-
-          return (
-            (
-              to -
-              from +
-              540
-            ) % 360
-          ) - 180;
-
-        }
-
-
-        function updateBusHeading(
+        function updateVehicleHeading(
+          vehicle,
           targetHeading
         ) {
-
           const delta =
             shortestAngleDelta(
-              lastRenderedHeading,
+              vehicle.lastRenderedHeading,
               targetHeading
             );
 
-
-          // Évite de recréer le symbole pour des variations
-          // imperceptibles.
           if (
             Math.abs(delta) <
             0.15
           ) {
-
             return;
-
           }
 
-
           const rotatedSymbol =
-            busGraphic.symbol.clone();
-
+            vehicle.graphic.symbol
+              .clone();
 
           const rotatedLayer =
-            rotatedSymbol.symbolLayers.getItemAt(
-              0
-            );
-
+            rotatedSymbol
+              .symbolLayers
+              .getItemAt(0);
 
           rotatedLayer.heading =
             targetHeading;
 
-
-          busGraphic.symbol =
+          vehicle.graphic.symbol =
             rotatedSymbol;
 
-
-          lastRenderedHeading =
+          vehicle.lastRenderedHeading =
             targetHeading;
-
         }
-
-
-
-        console.log(
-          "Bus Esri créé dans le SCR de la scène :",
-          busGraphic.geometry.spatialReference
-        );
-
-
-
-        // ======================================================
-        // ZOOM SUR LE TRAJET
-        // ======================================================
-
-        setStatus(
-          "Positionnement de la caméra..."
-        );
-
-
-        try {
-
-
-          await view.goTo(
-
-            {
-
-              target:
-                routeGeometry,
-
-              tilt:
-                65
-
-            },
-
-            {
-
-              duration:
-                1800
-
-            }
-
-          );
-
-
-        }
-
-        catch (
-          goToError
-        ) {
-
-
-          console.warn(
-            "goTo :",
-            goToError
-          );
-
-
-        }
-
-
 
         // ======================================================
         // ANIMATION
         // ======================================================
 
-        setStatus(
-          "Bus en circulation",
-          "ok"
-        );
-
-
-        console.log(
-          "Animation démarrée à",
-          SPEED_KMH,
-          "km/h"
-        );
-
-
-
         const animationStart =
           performance.now();
 
-
-        let lastHeadingLogTime =
+        let lastLog =
           0;
 
+        setStatus(
+          vehicles.length +
+          " véhicules en circulation",
+          "ok"
+        );
 
+        console.log(
+          "Animation démarrée :",
+          vehicles.length,
+          "véhicules"
+        );
 
         function animate(
           currentTime
         ) {
-
-
           try {
-
-
-            // --------------------------------------------------
-            // Temps écoulé.
-            // --------------------------------------------------
-
             const elapsedSeconds =
-
               (
                 currentTime -
                 animationStart
               )
-
               /
-
               1000;
 
-
-
-            // --------------------------------------------------
-            // Distance théorique parcourue depuis le départ.
-            // --------------------------------------------------
-
-            const travelled =
-
-              elapsedSeconds
-              *
-              SPEED_MS;
-
-
-
-            // --------------------------------------------------
-            // Cycle :
-            //
-            //      aller
-            //
-            // 0 -----------> longueur
-            //
-            //      retour
-            //
-            // longueur <---- 0
-            //
-            // --------------------------------------------------
-
-            const cycleLength =
-
-              totalLength *
-              2;
-
-
-
-            const cyclePosition =
-
-              travelled %
-              cycleLength;
-
-
-
-            let currentDistance;
-
-            let reverse;
-
-
-
-            if (
-              cyclePosition <=
-              totalLength
+            for (
+              const vehicle
+              of vehicles
             ) {
+              // ------------------------------------------------
+              // BOUCLE SIMPLE :
+              // début -> fin -> retour instantané au début.
+              // Aucune marche arrière.
+              // ------------------------------------------------
 
+              const travelled =
+                vehicle.startDistance
+                +
+                elapsedSeconds
+                *
+                vehicle.speedMs;
 
-              currentDistance =
-                cyclePosition;
+              const currentDistance =
+                travelled
+                %
+                vehicle.route.totalLength;
 
+              const position =
+                pointAtDistance(
+                  vehicle.route,
+                  currentDistance
+                );
 
-              reverse =
-                false;
+              vehicle.graphic.geometry =
+                new Point({
+                  x:
+                    position.x,
 
+                  y:
+                    position.y,
 
-            }
+                  spatialReference:
+                    view.spatialReference
+                });
 
-            else {
-
-
-              currentDistance =
-
-                cycleLength -
-                cyclePosition;
-
-
-              reverse =
-                true;
-
-
-            }
-
-
-
-            // --------------------------------------------------
-            // Position précise du bus.
-            // --------------------------------------------------
-
-            const position =
-              pointAtDistance(
-                currentDistance
-              );
-
-
-
-            busGraphic.geometry =
-              new Point({
-
-                x:
-                  position.lon,
-
-                y:
-                  position.lat,
-
-                spatialReference:
+              const targetHeading =
+                smoothHeading(
+                  vehicle.route,
+                  currentDistance,
                   view.spatialReference
+                );
 
-              });
-
-
-
-            // --------------------------------------------------
-            // Orientation.
-            // --------------------------------------------------
-
-            const targetHeading =
-              smoothHeading(
-
-                currentDistance,
-
-                reverse
-
+              updateVehicleHeading(
+                vehicle,
+                targetHeading
               );
+            }
 
-
-            updateBusHeading(
-              targetHeading
-            );
-
-
-            // Diagnostic léger : un log par seconde maximum.
             if (
               currentTime -
-              lastHeadingLogTime >
-              1000
+              lastLog >
+              5000
             ) {
-
               console.log(
-                "Bus heading :",
-                targetHeading.toFixed(1),
-                "°",
-                reverse
-                  ? "(retour)"
-                  : "(aller)"
+                "Animation OK :",
+                vehicles.length,
+                "véhicules"
               );
 
-              lastHeadingLogTime =
+              lastLog =
                 currentTime;
-
             }
-
-
-
-            // --------------------------------------------------
-            // Frame suivante.
-            // --------------------------------------------------
 
             requestAnimationFrame(
               animate
             );
-
-
           }
-
-          catch (
-            animationError
-          ) {
-
-
+          catch (animationError) {
             console.error(
               "Erreur animation :",
               animationError
             );
 
-
             setStatus(
-              "Erreur animation",
+              "Erreur animation - F12",
               "error"
             );
-
-
           }
-
         }
-
-
 
         requestAnimationFrame(
           animate
         );
-
-
       }
-
-      catch (
-        error
-      ) {
-
-
+      catch (error) {
         console.error(
           "ERREUR GÉNÉRALE :",
           error
         );
 
-
         setStatus(
           "Erreur - voir F12 / Console",
           "error"
         );
-
-
       }
-
     }
 
-
-
-    // ==========================================================
-    // DÉMARRAGE
-    // ==========================================================
-
     main();
-
-
   </script>
-
-
 </body>
-
 </html>
