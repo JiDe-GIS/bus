@@ -1469,11 +1469,24 @@
 
 
 
-        busObject.heading =
+        // ------------------------------------------------------
+        // Orientation initiale du bus.
+        //
+        // IMPORTANT :
+        // pour forcer le rafraîchissement du symbole 3D dans
+        // GraphicsLayer, on réaffecte un clone du symbole au
+        // Graphic lorsqu'on change le heading.
+        // ------------------------------------------------------
+
+        const initialHeading =
           smoothHeading(
             0,
             false
           );
+
+
+        busObject.heading =
+          initialHeading;
 
 
 
@@ -1506,6 +1519,85 @@
         busLayer.add(
           busGraphic
         );
+
+
+        // ======================================================
+        // MISE À JOUR FORCÉE DE L'ORIENTATION 3D
+        // ======================================================
+        //
+        // Modifier seulement busObject.heading ne suffit pas
+        // toujours à déclencher le redraw d'un Graphic 3D.
+        //
+        // On clone donc le symbole, modifie son heading, puis
+        // le réaffecte au Graphic. Pour un seul bus, le coût est
+        // négligeable et le rendu est fiable.
+        // ======================================================
+
+        let lastRenderedHeading =
+          initialHeading;
+
+
+        function shortestAngleDelta(
+          from,
+          to
+        ) {
+
+          return (
+            (
+              to -
+              from +
+              540
+            ) % 360
+          ) - 180;
+
+        }
+
+
+        function updateBusHeading(
+          targetHeading
+        ) {
+
+          const delta =
+            shortestAngleDelta(
+              lastRenderedHeading,
+              targetHeading
+            );
+
+
+          // Évite de recréer le symbole pour des variations
+          // imperceptibles.
+          if (
+            Math.abs(delta) <
+            0.15
+          ) {
+
+            return;
+
+          }
+
+
+          const rotatedSymbol =
+            busGraphic.symbol.clone();
+
+
+          const rotatedLayer =
+            rotatedSymbol.symbolLayers.getItemAt(
+              0
+            );
+
+
+          rotatedLayer.heading =
+            targetHeading;
+
+
+          busGraphic.symbol =
+            rotatedSymbol;
+
+
+          lastRenderedHeading =
+            targetHeading;
+
+        }
 
 
 
@@ -1587,6 +1679,10 @@
 
         const animationStart =
           performance.now();
+
+
+        let lastHeadingLogTime =
+          0;
 
 
 
@@ -1724,7 +1820,7 @@
             // Orientation.
             // --------------------------------------------------
 
-            busObject.heading =
+            const targetHeading =
               smoothHeading(
 
                 currentDistance,
@@ -1732,6 +1828,33 @@
                 reverse
 
               );
+
+
+            updateBusHeading(
+              targetHeading
+            );
+
+
+            // Diagnostic léger : un log par seconde maximum.
+            if (
+              currentTime -
+              lastHeadingLogTime >
+              1000
+            ) {
+
+              console.log(
+                "Bus heading :",
+                targetHeading.toFixed(1),
+                "°",
+                reverse
+                  ? "(retour)"
+                  : "(aller)"
+              );
+
+              lastHeadingLogTime =
+                currentTime;
+
+            }
 
 
 
