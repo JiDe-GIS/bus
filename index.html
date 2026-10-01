@@ -133,6 +133,20 @@
     #presentationDescription:empty {
       display: none;
     }
+
+    /* Mode COVER uniquement : plus grand au centre.
+       Le mode CAPTION en haut reste inchangé. */
+    #slidePresentation.cover #presentationTitle {
+      font-size: clamp(34px, 4.2vw, 64px);
+      line-height: 1.05;
+      font-weight: 700;
+    }
+
+    #slidePresentation.cover #presentationDescription {
+      margin-top: 12px;
+      font-size: clamp(18px, 2vw, 30px);
+      line-height: 1.28;
+    }
   </style>
 
   <script>
@@ -203,7 +217,7 @@
     // le bateau au-dessus du mesh / fond de rivière.
     // À ajuster si besoin après ton prochain test.
     const BOAT_VERTICAL_OFFSET =
-      4.0;
+      6.0;
 
     const HEADING_LOOK_AHEAD_METERS =
       4;
@@ -705,226 +719,12 @@
     }
 
     // ==========================================================
-    // EAU : ANIMATION FORCÉE DU WaterSymbol3DLayer
+    // EAU
     // ==========================================================
-
-    function tuneWaterSymbol(
-      symbol,
-      liveWaterLayers
-    ) {
-      let changed =
-        false;
-
-      let count =
-        0;
-
-      if (
-        !symbol ||
-        !symbol.symbolLayers
-      ) {
-        return {
-          changed:
-            false,
-
-          count:
-            0
-        };
-      }
-
-      symbol.symbolLayers.forEach(
-        function(symbolLayer) {
-          if (
-            symbolLayer.type === "water"
-          ) {
-            symbolLayer.waveStrength =
-              "moderate";
-
-            symbolLayer.waterbodySize =
-              "small";
-
-            if (
-              symbolLayer.waveDirection == null
-            ) {
-              symbolLayer.waveDirection =
-                35;
-            }
-
-            liveWaterLayers.push(
-              symbolLayer
-            );
-
-            changed =
-              true;
-
-            count +=
-              1;
-          }
-        }
-      );
-
-      return {
-        changed:
-          changed,
-
-        count:
-          count
-      };
-    }
-
-    async function enableWaterAnimation(
-      webscene
-    ) {
-      let waterCount =
-        0;
-
-      const liveWaterLayers =
-        [];
-
-      const layers =
-        webscene.allLayers
-          ?
-          webscene.allLayers.toArray()
-          :
-          [];
-
-      await Promise.allSettled(
-        layers.map(
-          function(layer) {
-            return layer.load();
-          }
-        )
-      );
-
-      for (
-        const layer
-        of layers
-      ) {
-        if (
-          !layer.renderer ||
-          typeof layer.renderer.clone !== "function"
-        ) {
-          continue;
-        }
-
-        const renderer =
-          layer.renderer.clone();
-
-        let changed =
-          false;
-
-        if (
-          renderer.symbol
-        ) {
-          const result =
-            tuneWaterSymbol(
-              renderer.symbol,
-              liveWaterLayers
-            );
-
-          changed =
-            changed ||
-            result.changed;
-
-          waterCount +=
-            result.count;
-        }
-
-        if (
-          renderer.uniqueValueInfos
-        ) {
-          renderer.uniqueValueInfos.forEach(
-            function(info) {
-              const result =
-                tuneWaterSymbol(
-                  info.symbol,
-                  liveWaterLayers
-                );
-
-              changed =
-                changed ||
-                result.changed;
-
-              waterCount +=
-                result.count;
-            }
-          );
-        }
-
-        if (
-          renderer.classBreakInfos
-        ) {
-          renderer.classBreakInfos.forEach(
-            function(info) {
-              const result =
-                tuneWaterSymbol(
-                  info.symbol,
-                  liveWaterLayers
-                );
-
-              changed =
-                changed ||
-                result.changed;
-
-              waterCount +=
-                result.count;
-            }
-          );
-        }
-
-        if (
-          changed
-        ) {
-          layer.renderer =
-            renderer;
-        }
-      }
-
-      console.log(
-        "WaterSymbol3DLayer animés détectés :",
-        waterCount
-      );
-
-      if (
-        waterCount === 0
-      ) {
-        console.warn(
-          "Aucun WaterSymbol3DLayer détecté : impossible d'animer cette eau sans identifier sa couche source."
-        );
-
-        return;
-      }
-
-      // --------------------------------------------------------
-      // Le shader Esri anime déjà l'eau.
-      // On ajoute un très léger changement de direction à 8 Hz
-      // afin que le mouvement soit réellement visible en démo,
-      // même en vue quasi verticale.
-      // --------------------------------------------------------
-
-      let dynamicDirection =
-        35;
-
-      window.setInterval(
-        function() {
-          dynamicDirection =
-            (
-              dynamicDirection +
-              1.4
-            )
-            %
-            360;
-
-          liveWaterLayers.forEach(
-            function(symbolLayer) {
-              symbolLayer.waveDirection =
-                dynamicDirection;
-            }
-          );
-        },
-        125
-      );
-    }
-
+    //
+    // Aucun traitement SDK volontairement.
+    // Le rendu est celui enregistré dans la Web Scene.
+    //
     // ==========================================================
     // DIAPOSITIVES
     // ==========================================================
@@ -1251,17 +1051,10 @@
           view.spatialReference.latestWkid
         );
 
-        // Active / renforce l'eau native si la scène utilise
-        // bien un WaterSymbol3DLayer.
-        enableWaterAnimation(
-          webscene
-        ).catch(
-          function(error) {
-            console.warn(
-              "Animation eau non modifiée :",
-              error
-            );
-          }
+        // Eau : aucun override côté SDK.
+        // On conserve exactement le rendu enregistré dans la Web Scene.
+        console.log(
+          "Eau : rendu original de la Web Scene conservé."
         );
 
         // Navigation dans les diapositives directement depuis
@@ -1586,7 +1379,7 @@
                   0,
 
                 z:
-                  -0.38
+                  -0.50
               };
 
               if (
@@ -1813,11 +1606,55 @@
           );
         }
 
+        function vehiclePriorityRank(
+          vehicle
+        ) {
+          // Priorité de circulation :
+          // 0 = BUS / TRUCK
+          // 1 = CAR
+          // Les bateaux sont exclus de l'anti-collision routier.
+          if (
+            vehicle.type === "BUS"
+            ||
+            vehicle.type === "TRUCK"
+          ) {
+            return 0;
+          }
+
+          return 1;
+        }
+
+
         function chooseBlockedVehicle(
           vehicleA,
           vehicleB
         ) {
-          // L'ID le plus faible garde la priorité.
+          const rankA =
+            vehiclePriorityRank(
+              vehicleA
+            );
+
+          const rankB =
+            vehiclePriorityRank(
+              vehicleB
+            );
+
+          // Le rang le plus faible passe en premier.
+          if (
+            rankA <
+            rankB
+          ) {
+            return vehicleB;
+          }
+
+          if (
+            rankB <
+            rankA
+          ) {
+            return vehicleA;
+          }
+
+          // À priorité égale, l'ID le plus faible garde la priorité.
           return vehicleA.priority <=
             vehicleB.priority
             ?
