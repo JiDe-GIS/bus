@@ -28,13 +28,21 @@
       transform: translateX(-50%);
       z-index: 100;
       display: none;
+      width: min(520px, calc(100vw - 28px));
+      box-sizing: border-box;
+      padding: 9px 10px 10px 10px;
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 9px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+      font-family: "Avenir Next", Avenir, Arial, sans-serif;
+      backdrop-filter: blur(3px);
+    }
+
+    #slideNav {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) 34px;
       align-items: center;
       gap: 6px;
-      padding: 6px 8px;
-      background: rgba(255, 255, 255, 0.92);
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
-      font-family: "Avenir Next", Avenir, Arial, sans-serif;
     }
 
     #slideControls button {
@@ -52,14 +60,37 @@
     }
 
     #slideSelect {
+      width: 100%;
       height: 30px;
-      max-width: 220px;
+      min-width: 0;
       border: 1px solid #cfcfcf;
       border-radius: 5px;
       background: #ffffff;
       padding: 0 8px;
       font-family: "Avenir Next", Avenir, Arial, sans-serif;
       font-size: 13px;
+    }
+
+    #slideTitle {
+      margin-top: 7px;
+      font-size: 14px;
+      line-height: 1.2;
+      font-weight: 700;
+      color: #1f2933;
+    }
+
+    #slideDescription {
+      margin-top: 3px;
+      max-height: 52px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #4b5563;
+      white-space: pre-line;
+    }
+
+    #slideDescription:empty {
+      display: none;
     }
   </style>
 
@@ -91,9 +122,13 @@
   <div id="viewDiv"></div>
 
   <div id="slideControls">
-    <button id="prevSlide" type="button" title="Diapositive précédente">‹</button>
-    <select id="slideSelect" aria-label="Diapositives de la Web Scene"></select>
-    <button id="nextSlide" type="button" title="Diapositive suivante">›</button>
+    <div id="slideNav">
+      <button id="prevSlide" type="button" title="Diapositive précédente">‹</button>
+      <select id="slideSelect" aria-label="Diapositives de la Web Scene"></select>
+      <button id="nextSlide" type="button" title="Diapositive suivante">›</button>
+    </div>
+    <div id="slideTitle"></div>
+    <div id="slideDescription"></div>
   </div>
 
   <script type="module">
@@ -656,7 +691,10 @@
             // par le moteur 3D. On accentue ici les petites vagues
             // qui font évoluer les reflets.
             symbolLayer.waveStrength =
-              "rippled";
+              "moderate";
+
+            symbolLayer.waterbodySize =
+              "small";
 
             if (
               symbolLayer.waveDirection == null
@@ -849,8 +887,42 @@
           "nextSlide"
         );
 
+      const titleDiv =
+        document.getElementById(
+          "slideTitle"
+        );
+
+      const descriptionDiv =
+        document.getElementById(
+          "slideDescription"
+        );
+
       let currentIndex =
         0;
+
+      function updateSlideText(
+        slide,
+        index
+      ) {
+        const title =
+          slide?.title?.text
+          ||
+          (
+            "Diapo " +
+            (index + 1)
+          );
+
+        const description =
+          slide?.description?.text
+          ||
+          "";
+
+        titleDiv.textContent =
+          title;
+
+        descriptionDiv.textContent =
+          description;
+      }
 
       slideEntries.forEach(
         function(slide, index) {
@@ -906,6 +978,11 @@
 
         select.value =
           String(index);
+
+        updateSlideText(
+          slideEntries[index],
+          index
+        );
 
         try {
           await slideEntries[
@@ -963,8 +1040,13 @@
         }
       );
 
+      updateSlideText(
+        slideEntries[0],
+        0
+      );
+
       controls.style.display =
-        "flex";
+        "block";
 
       console.log(
         "Diapositives disponibles :",
@@ -1034,6 +1116,11 @@
           });
 
         await view.when();
+
+        // Les WaterSymbol3DLayer sont des surfaces d'eau animées.
+        // On force explicitement les animations de la SceneView.
+        view.animationsEnabled =
+          true;
 
         console.log(
           "WebScene chargée."
@@ -1481,6 +1568,15 @@
                 :
                 9999,
 
+              currentSpeedMs:
+                speedKmh / 3.6,
+
+              targetSpeedMs:
+                speedKmh / 3.6,
+
+              lastHeadingUpdate:
+                0,
+
               lastRenderedHeading:
                 initialHeading
             });
@@ -1516,19 +1612,31 @@
 
         function updateVehicleHeading(
           vehicle,
-          targetHeading
+          targetHeading,
+          currentTime
         ) {
+          // Le clone/réaffectation du symbole 3D est coûteux.
+          // 12,5 mises à jour/s suffisent visuellement pour le cap.
+          if (
+            currentTime -
+            vehicle.lastHeadingUpdate <
+            80
+          ) {
+            return;
+          }
+
+          vehicle.lastHeadingUpdate =
+            currentTime;
+
           const delta =
             shortestAngleDelta(
               vehicle.lastRenderedHeading,
               targetHeading
             );
 
-          // Réduit le nombre de clones de symboles et donc
-          // la charge CPU/GPU sans perdre la fluidité visuelle.
           if (
             Math.abs(delta) <
-            0.5
+            1.0
           ) {
             return;
           }
@@ -1583,6 +1691,142 @@
             vehicleA;
         }
 
+        const roadVehicles =
+          vehicles.filter(
+            function(vehicle) {
+              return vehicle.type !== "BOAT";
+            }
+          );
+
+        let blockedVehicles =
+          new Set();
+
+        let lastCollisionCheck =
+          0;
+
+        function updateCollisionState(
+          currentTime
+        ) {
+          // 10 Hz suffit pour 12 véhicules et allège fortement
+          // le travail effectué à chaque frame.
+          if (
+            currentTime -
+            lastCollisionCheck <
+            100
+          ) {
+            return;
+          }
+
+          lastCollisionCheck =
+            currentTime;
+
+          const newBlocked =
+            new Set();
+
+          const horizonSeconds =
+            0.8;
+
+          for (
+            let i = 0;
+            i < roadVehicles.length;
+            i++
+          ) {
+            for (
+              let j = i + 1;
+              j < roadVehicles.length;
+              j++
+            ) {
+              const vehicleA =
+                roadVehicles[i];
+
+              const vehicleB =
+                roadVehicles[j];
+
+              const predictedDistanceA =
+                (
+                  vehicleA.currentDistance
+                  +
+                  vehicleA.currentSpeedMs
+                  *
+                  horizonSeconds
+                )
+                %
+                vehicleA.route.totalLength;
+
+              const predictedDistanceB =
+                (
+                  vehicleB.currentDistance
+                  +
+                  vehicleB.currentSpeedMs
+                  *
+                  horizonSeconds
+                )
+                %
+                vehicleB.route.totalLength;
+
+              const predictedA =
+                pointAtDistance(
+                  vehicleA.route,
+                  predictedDistanceA
+                );
+
+              const predictedB =
+                pointAtDistance(
+                  vehicleB.route,
+                  predictedDistanceB
+                );
+
+              const distanceNow =
+                distanceMeters(
+                  vehicleA.currentPosition.x,
+                  vehicleA.currentPosition.y,
+                  vehicleB.currentPosition.x,
+                  vehicleB.currentPosition.y,
+                  view.spatialReference
+                );
+
+              const distanceFuture =
+                distanceMeters(
+                  predictedA.x,
+                  predictedA.y,
+                  predictedB.x,
+                  predictedB.y,
+                  view.spatialReference
+                );
+
+              const threshold =
+                collisionThreshold(
+                  vehicleA,
+                  vehicleB
+                );
+
+              const converging =
+                distanceFuture <
+                distanceNow;
+
+              if (
+                distanceFuture <
+                threshold
+                &&
+                converging
+              ) {
+                const loser =
+                  chooseBlockedVehicle(
+                    vehicleA,
+                    vehicleB
+                  );
+
+                newBlocked.add(
+                  loser.id
+                );
+              }
+            }
+          }
+
+          blockedVehicles =
+            newBlocked;
+        }
+
         // ======================================================
         // ANIMATION
         // ======================================================
@@ -1590,14 +1834,34 @@
         let lastFrameTime =
           performance.now();
 
-        let lastCollisionLog =
-          0;
-
         console.log(
           "Animation démarrée :",
           vehicles.length,
           "véhicules"
         );
+
+        function moveToward(
+          current,
+          target,
+          maxDelta
+        ) {
+          if (
+            current <
+            target
+          ) {
+            return Math.min(
+              current +
+              maxDelta,
+              target
+            );
+          }
+
+          return Math.max(
+            current -
+            maxDelta,
+            target
+          );
+        }
 
         function animate(
           currentTime
@@ -1614,205 +1878,79 @@
             lastFrameTime =
               currentTime;
 
-            // Évite un saut énorme après mise en veille de l'onglet.
+            // Évite les bonds après changement d'onglet.
             dt =
               Math.min(
                 dt,
-                0.10
+                0.05
               );
 
-            const proposals =
-              new Map();
+            updateCollisionState(
+              currentTime
+            );
 
             for (
               const vehicle
               of vehicles
             ) {
-              const nextDistance =
+              const isBlocked =
+                vehicle.type !== "BOAT"
+                &&
+                blockedVehicles.has(
+                  vehicle.id
+                );
+
+              vehicle.targetSpeedMs =
+                isBlocked
+                ?
+                0
+                :
+                vehicle.speedMs;
+
+              // Freinage plus franc que l'accélération :
+              // pas d'arrêt instantané, donc mouvement plus naturel.
+              const rate =
+                vehicle.targetSpeedMs <
+                vehicle.currentSpeedMs
+                ?
+                5.0
+                :
+                2.5;
+
+              vehicle.currentSpeedMs =
+                moveToward(
+                  vehicle.currentSpeedMs,
+                  vehicle.targetSpeedMs,
+                  rate * dt
+                );
+
+              vehicle.currentDistance =
                 (
                   vehicle.currentDistance
                   +
-                  vehicle.speedMs
+                  vehicle.currentSpeedMs
                   *
                   dt
                 )
                 %
                 vehicle.route.totalLength;
 
-              const nextPosition =
+              const position =
                 pointAtDistance(
                   vehicle.route,
-                  nextDistance
+                  vehicle.currentDistance
                 );
-
-              proposals.set(
-                vehicle.id,
-                {
-                  distance:
-                    nextDistance,
-
-                  position:
-                    nextPosition
-                }
-              );
-            }
-
-            const blocked =
-              new Set();
-
-            // --------------------------------------------------
-            // Les bateaux ne participent pas au trafic routier.
-            // --------------------------------------------------
-
-            const roadVehicles =
-              vehicles.filter(
-                function(vehicle) {
-                  return vehicle.type !== "BOAT";
-                }
-              );
-
-            for (
-              let i = 0;
-              i < roadVehicles.length;
-              i++
-            ) {
-              for (
-                let j = i + 1;
-                j < roadVehicles.length;
-                j++
-              ) {
-                const vehicleA =
-                  roadVehicles[i];
-
-                const vehicleB =
-                  roadVehicles[j];
-
-                const proposalA =
-                  proposals.get(
-                    vehicleA.id
-                  );
-
-                const proposalB =
-                  proposals.get(
-                    vehicleB.id
-                  );
-
-                const distanceNow =
-                  distanceMeters(
-                    vehicleA.currentPosition.x,
-                    vehicleA.currentPosition.y,
-                    vehicleB.currentPosition.x,
-                    vehicleB.currentPosition.y,
-                    view.spatialReference
-                  );
-
-                const distanceNext =
-                  distanceMeters(
-                    proposalA.position.x,
-                    proposalA.position.y,
-                    proposalB.position.x,
-                    proposalB.position.y,
-                    view.spatialReference
-                  );
-
-                const threshold =
-                  collisionThreshold(
-                    vehicleA,
-                    vehicleB
-                  );
-
-                const converging =
-                  distanceNext <
-                  distanceNow -
-                  0.02;
-
-                const alreadyTooClose =
-                  distanceNow <
-                  threshold *
-                  0.65;
-
-                if (
-                  (
-                    distanceNext <
-                    threshold
-                    &&
-                    converging
-                  )
-                  ||
-                  alreadyTooClose
-                ) {
-                  const loser =
-                    chooseBlockedVehicle(
-                      vehicleA,
-                      vehicleB
-                    );
-
-                  blocked.add(
-                    loser.id
-                  );
-
-                  if (
-                    currentTime -
-                    lastCollisionLog >
-                    1000
-                  ) {
-                    console.log(
-                      "Anti-collision :",
-                      loser.id,
-                      "attend pour",
-                      (
-                        loser.id ===
-                        vehicleA.id
-                        ?
-                        vehicleB.id
-                        :
-                        vehicleA.id
-                      )
-                    );
-
-                    lastCollisionLog =
-                      currentTime;
-                  }
-                }
-              }
-            }
-
-            // --------------------------------------------------
-            // Application des positions.
-            // --------------------------------------------------
-
-            for (
-              const vehicle
-              of vehicles
-            ) {
-              if (
-                vehicle.type !== "BOAT"
-                &&
-                blocked.has(
-                  vehicle.id
-                )
-              ) {
-                continue;
-              }
-
-              const proposal =
-                proposals.get(
-                  vehicle.id
-                );
-
-              vehicle.currentDistance =
-                proposal.distance;
 
               vehicle.currentPosition =
-                proposal.position;
+                position;
 
               vehicle.graphic.geometry =
                 new Point({
                   x:
-                    proposal.position.x,
+                    position.x,
 
                   y:
-                    proposal.position.y,
+                    position.y,
 
                   spatialReference:
                     view.spatialReference
@@ -1827,7 +1965,8 @@
 
               updateVehicleHeading(
                 vehicle,
-                targetHeading
+                targetHeading,
+                currentTime
               );
             }
 
