@@ -25,6 +25,13 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
+      font-family: "Avenir Next", Avenir, sans-serif;
+    }
+
+    button,
+    select,
+    input {
+      font-family: "Avenir Next", Avenir, sans-serif;
     }
 
     /* Aucun cartouche "Mobilité 3D / 13 véhicules". */
@@ -52,7 +59,7 @@
       border-radius: 10px;
       background: #ffffff;
       color: #1f2933;
-      font-family: Arial, sans-serif;
+      font-family: "Avenir Next", Avenir, sans-serif;
       font-size: 30px;
       line-height: 48px;
       font-weight: 400;
@@ -132,7 +139,7 @@
          de Scene Viewer : voile large, doux, sans bord perceptible. */
       background:
         radial-gradient(
-          ellipse 58% 38% at 50% 50%,
+          ellipse 48% 30% at 50% 50%,
           rgba(244, 244, 239, 0.88) 0%,
           rgba(244, 244, 239, 0.84) 24%,
           rgba(244, 244, 239, 0.70) 42%,
@@ -159,6 +166,7 @@
       font-size: clamp(13px, 1.2vw, 19px);
       line-height: 1.35;
       font-weight: 400;
+      font-style: italic;
       white-space: pre-line;
     }
 
@@ -1864,6 +1872,9 @@
               );
 
             vehicles.push({
+              key:
+                id + "_A",
+
               id:
                 id,
 
@@ -1929,6 +1940,172 @@
             );
           }
         }
+
+        // ======================================================
+        // DENSIFICATION DU TRAFIC x2
+        // ======================================================
+        //
+        // On duplique uniquement les véhicules routiers.
+        // Le second exemplaire démarre à +50 % de son trajet.
+        // Aucun attribut supplémentaire n'est nécessaire.
+        // ======================================================
+
+        const originalRoadVehicles =
+          vehicles.filter(
+            function(vehicle) {
+              return vehicle.type !== "BOAT";
+            }
+          );
+
+        for (
+          const sourceVehicle
+          of originalRoadVehicles
+        ) {
+          try {
+            const duplicateDistance =
+              (
+                sourceVehicle.currentDistance
+                +
+                sourceVehicle.route.totalLength
+                *
+                0.50
+              )
+              %
+              sourceVehicle.route.totalLength;
+
+            const duplicatePosition =
+              pointAtDistance(
+                sourceVehicle.route,
+                duplicateDistance
+              );
+
+            const duplicateHeading =
+              smoothHeading(
+                sourceVehicle.route,
+                duplicateDistance,
+                view.spatialReference
+              );
+
+            const duplicateSymbol =
+              sourceVehicle.graphic.symbol
+                .clone();
+
+            const duplicateSymbolLayer =
+              duplicateSymbol.symbolLayers
+                .getItemAt(0);
+
+            duplicateSymbolLayer.heading =
+              duplicateHeading;
+
+            const duplicateGraphic =
+              new Graphic({
+                geometry:
+                  new Point({
+                    x:
+                      duplicatePosition.x,
+
+                    y:
+                      duplicatePosition.y,
+
+                    spatialReference:
+                      view.spatialReference
+                  }),
+
+                symbol:
+                  duplicateSymbol,
+
+                attributes: {
+                  ID_VEH:
+                    sourceVehicle.id + "_B",
+
+                  TYPE_V:
+                    sourceVehicle.type,
+
+                  MODELE:
+                    sourceVehicle.symbolName,
+
+                  VITESSE:
+                    sourceVehicle.speedKmh
+                }
+              });
+
+            roadVehicleLayer.add(
+              duplicateGraphic
+            );
+
+            vehicles.push({
+              key:
+                sourceVehicle.id + "_B",
+
+              id:
+                sourceVehicle.id,
+
+              type:
+                sourceVehicle.type,
+
+              symbolName:
+                sourceVehicle.symbolName,
+
+              speedKmh:
+                sourceVehicle.speedKmh,
+
+              speedMs:
+                sourceVehicle.speedMs,
+
+              route:
+                sourceVehicle.route,
+
+              currentDistance:
+                duplicateDistance,
+
+              currentPosition:
+                duplicatePosition,
+
+              graphic:
+                duplicateGraphic,
+
+              priority:
+                sourceVehicle.priority +
+                0.01,
+
+              currentSpeedMs:
+                sourceVehicle.speedMs,
+
+              targetSpeedMs:
+                sourceVehicle.speedMs,
+
+              lastHeadingUpdate:
+                0,
+
+              lastRenderedHeading:
+                duplicateHeading
+            });
+          }
+          catch (duplicateError) {
+            console.warn(
+              "Duplication trafic ignorée pour :",
+              sourceVehicle.id,
+              duplicateError
+            );
+          }
+        }
+
+        console.log(
+          "Trafic x2 activé :",
+          vehicles.filter(
+            function(vehicle) {
+              return vehicle.type !== "BOAT";
+            }
+          ).length,
+          "véhicules routiers +",
+          vehicles.filter(
+            function(vehicle) {
+              return vehicle.type === "BOAT";
+            }
+          ).length,
+          "bateau(x)."
+        );
+
 
         if (
           vehicles.length === 0
@@ -2083,11 +2260,12 @@
         function updateCollisionState(
           currentTime
         ) {
-          // 20 Hz : réactif mais toujours très léger pour 12 véhicules.
+          // ~12,5 Hz : suffisant pour l'anticipation, tout en gardant
+          // une animation fluide avec le trafic doublé.
           if (
             currentTime -
             lastCollisionCheck <
-            50
+            80
           ) {
             return;
           }
@@ -2102,11 +2280,10 @@
           // Cela détecte aussi deux véhicules qui se croisent
           // entre "maintenant" et la position finale de prédiction.
           const sampleTimes = [
-            0.25,
-            0.50,
-            0.75,
-            1.00,
-            1.25,
+            0.30,
+            0.60,
+            0.90,
+            1.20,
             1.50,
             1.80
           ];
@@ -2219,7 +2396,7 @@
                   );
 
                 newBlocked.add(
-                  loser.id
+                  loser.key
                 );
               }
             }
@@ -2299,7 +2476,7 @@
                 vehicle.type !== "BOAT"
                 &&
                 blockedVehicles.has(
-                  vehicle.id
+                  vehicle.key
                 );
 
               vehicle.targetSpeedMs =
