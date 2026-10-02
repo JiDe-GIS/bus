@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261002-CINEMA";
+      "SIG2026-20261002-WEATHER-BOATFIX";
 
     console.log(
       "BUILD :",
@@ -33,7 +33,7 @@
     // le bateau au-dessus du mesh / fond de rivière.
     // À ajuster si besoin après ton prochain test.
     const BOAT_VERTICAL_OFFSET =
-      4.7;
+      5.55;
 
     const HEADING_LOOK_AHEAD_METERS =
       4;
@@ -894,10 +894,10 @@
                 420,
 
               alphaMin:
-                0.030,
+                0.040,
 
               alphaMax:
-                0.070,
+                0.085,
 
               widthMin:
                 0.45,
@@ -906,10 +906,10 @@
                 0.75,
 
               angleMin:
-                0.58,
+                0.66,
 
               angleMax:
-                0.72
+                0.80
             }
           },
 
@@ -943,10 +943,10 @@
                 680,
 
               alphaMin:
-                0.055,
+                0.070,
 
               alphaMax:
-                0.110,
+                0.135,
 
               widthMin:
                 0.65,
@@ -955,10 +955,10 @@
                 1.00,
 
               angleMin:
-                0.62,
+                0.70,
 
               angleMax:
-                0.80
+                0.86
             }
           },
 
@@ -992,10 +992,10 @@
                 1050,
 
               alphaMin:
-                0.080,
+                0.095,
 
               alphaMax:
-                0.150,
+                0.175,
 
               widthMin:
                 0.95,
@@ -1004,10 +1004,10 @@
                 1.45,
 
               angleMin:
-                0.68,
+                0.74,
 
               angleMax:
-                0.88
+                0.92
             }
           }
         ];
@@ -1742,6 +1742,184 @@
           "cinemaGrade"
         );
 
+      const starCanvas =
+        document.getElementById(
+          "starCanvas"
+        );
+
+      const starCtx =
+        starCanvas.getContext(
+          "2d"
+        );
+
+      let stars =
+        [];
+
+      let starAnimation =
+        null;
+
+      let starsActive =
+        false;
+
+
+      function resizeStars() {
+        const dpr =
+          Math.min(
+            window.devicePixelRatio || 1,
+            2
+          );
+
+        starCanvas.width =
+          Math.max(
+            1,
+            Math.floor(
+              window.innerWidth *
+              dpr
+            )
+          );
+
+        starCanvas.height =
+          Math.max(
+            1,
+            Math.floor(
+              window.innerHeight *
+              dpr
+            )
+          );
+
+        starCanvas.style.width =
+          window.innerWidth +
+          "px";
+
+        starCanvas.style.height =
+          window.innerHeight +
+          "px";
+
+        starCtx.setTransform(
+          dpr,
+          0,
+          0,
+          dpr,
+          0,
+          0
+        );
+
+        stars =
+          Array.from(
+            {
+              length:
+                Math.max(
+                  72,
+                  Math.round(
+                    window.innerWidth /
+                    18
+                  )
+                )
+            },
+            function() {
+              return {
+                x:
+                  Math.random() *
+                  window.innerWidth,
+
+                y:
+                  Math.random() *
+                  window.innerHeight *
+                  0.155,
+
+                r:
+                  0.35 +
+                  Math.random() *
+                  0.90,
+
+                phase:
+                  Math.random() *
+                  Math.PI *
+                  2,
+
+                speed:
+                  0.0010 +
+                  Math.random() *
+                  0.0016,
+
+                alpha:
+                  0.28 +
+                  Math.random() *
+                  0.48
+              };
+            }
+          );
+      }
+
+
+      function drawStars(
+        now
+      ) {
+        if (
+          !starsActive
+        ) {
+          return;
+        }
+
+        starCtx.clearRect(
+          0,
+          0,
+          window.innerWidth,
+          window.innerHeight
+        );
+
+        stars.forEach(
+          function(star) {
+            const twinkle =
+              0.64 +
+              0.36 *
+              Math.sin(
+                now *
+                star.speed +
+                star.phase
+              );
+
+            const alpha =
+              star.alpha *
+              twinkle;
+
+            starCtx.beginPath();
+
+            starCtx.arc(
+              star.x,
+              star.y,
+              star.r,
+              0,
+              Math.PI *
+              2
+            );
+
+            starCtx.fillStyle =
+              "rgba(235,244,255," +
+              alpha +
+              ")";
+
+            starCtx.shadowColor =
+              "rgba(215,232,255,0.55)";
+
+            starCtx.shadowBlur =
+              star.r >
+              0.9
+              ?
+              3
+              :
+              1.2;
+
+            starCtx.fill();
+          }
+        );
+
+        starAnimation =
+          requestAnimationFrame(
+            drawStars
+          );
+      }
+
 
       function setSun(
         enabled
@@ -1764,6 +1942,60 @@
             enabled
           )
         );
+      }
+
+
+      function setStars(
+        enabled
+      ) {
+        const next =
+          Boolean(
+            enabled
+          );
+
+        if (
+          next ===
+          starsActive
+        ) {
+          return;
+        }
+
+        starsActive =
+          next;
+
+        starCanvas.style.display =
+          next
+          ?
+          "block"
+          :
+          "none";
+
+        if (
+          next
+        ) {
+          resizeStars();
+
+          starAnimation =
+            requestAnimationFrame(
+              drawStars
+            );
+        }
+        else {
+          if (
+            starAnimation
+          ) {
+            cancelAnimationFrame(
+              starAnimation
+            );
+          }
+
+          starCtx.clearRect(
+            0,
+            0,
+            window.innerWidth,
+            window.innerHeight
+          );
+        }
       }
 
 
@@ -1791,12 +2023,27 @@
       }
 
 
+      window.addEventListener(
+        "resize",
+        function() {
+          if (
+            starsActive
+          ) {
+            resizeStars();
+          }
+        }
+      );
+
+
       return {
         setSun:
           setSun,
 
         setNight:
           setNight,
+
+        setStars:
+          setStars,
 
         setCinemaMode:
           setCinemaMode
@@ -1915,18 +2162,37 @@
       function applySlideEnhancements(
         index
       ) {
-        const rainActive =
-          rainStartIndex >= 0
-          &&
-          index >=
-            rainStartIndex
-          &&
-          (
-            rainStopIndex < 0
-            ||
-            index <
-              rainStopIndex
+        const fallbackRainStart =
+          Math.min(
+            6,
+            Math.max(
+              0,
+              slideEntries.length - 1
+            )
           );
+
+        const effectiveRainStart =
+          rainStartIndex >=
+          0
+          ?
+          rainStartIndex
+          :
+          fallbackRainStart;
+
+        const effectiveRainStop =
+          rainStopIndex >=
+          0
+          ?
+          rainStopIndex
+          :
+          starStartIndex;
+
+        const rainActive =
+          index >=
+          effectiveRainStart
+          &&
+          index <
+          effectiveRainStop;
 
         const nightActive =
           index >=
@@ -1953,6 +2219,10 @@
           nightActive
         );
 
+        ambientController.setStars(
+          nightActive
+        );
+
         ambientController.setCinemaMode(
           nightActive
           ?
@@ -1973,16 +2243,14 @@
           )
         );
 
-        // Étoiles natives Esri uniquement : elles sont réellement
-        // derrière le mesh et ne peuvent plus recouvrir les bâtiments.
+        // Étoiles natives derrière la scène + scintillement de renfort
+        // limité à la bande haute du ciel.
         view.environment.starsEnabled =
           nightActive;
 
         if (
           nightActive
         ) {
-          // En retirant l'atmosphère uniquement sur les deux dernières
-          // slides, les étoiles natives ressortent sur le fond du ciel.
           view.environment.atmosphereEnabled =
             false;
 
@@ -1998,6 +2266,10 @@
             ]
           };
         }
+        else {
+          view.environment.atmosphereEnabled =
+            true;
+        }
 
         console.log(
           "Effets slide :",
@@ -2005,6 +2277,12 @@
           {
             rain:
               rainActive,
+
+            rainStart:
+              effectiveRainStart + 1,
+
+            rainStop:
+              effectiveRainStop + 1,
 
             sunRays:
               sunActive,
@@ -2973,7 +3251,7 @@
                   0,
 
                 z:
-                  -0.12
+                  -0.28
               };
 
               if (
