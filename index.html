@@ -126,27 +126,35 @@
     #starCanvas {
       z-index: 88;
       display: none;
-      opacity: 0.82;
+      opacity: 0.72;
+      mix-blend-mode: screen;
 
-      /* Les étoiles de renfort restent dans le ciel.
-         Les étoiles natives Esri restent actives derrière. */
+      /* Les étoiles de renfort restent uniquement dans la bande de ciel. */
+      clip-path: polygon(
+        0 0,
+        100% 0,
+        100% 18%,
+        0 24%
+      );
+
       -webkit-mask-image:
         linear-gradient(
           to bottom,
-          rgba(0, 0, 0, 1) 0%,
-          rgba(0, 0, 0, 1) 15%,
-          rgba(0, 0, 0, 0.62) 20%,
-          rgba(0, 0, 0, 0.18) 25%,
-          rgba(0, 0, 0, 0) 29%
+          rgba(0, 0, 0, 0.98) 0%,
+          rgba(0, 0, 0, 0.92) 8%,
+          rgba(0, 0, 0, 0.55) 15%,
+          rgba(0, 0, 0, 0.12) 20%,
+          rgba(0, 0, 0, 0.00) 24%
         );
+
       mask-image:
         linear-gradient(
           to bottom,
-          rgba(0, 0, 0, 1) 0%,
-          rgba(0, 0, 0, 1) 15%,
-          rgba(0, 0, 0, 0.62) 20%,
-          rgba(0, 0, 0, 0.18) 25%,
-          rgba(0, 0, 0, 0) 29%
+          rgba(0, 0, 0, 0.98) 0%,
+          rgba(0, 0, 0, 0.92) 8%,
+          rgba(0, 0, 0, 0.55) 15%,
+          rgba(0, 0, 0, 0.12) 20%,
+          rgba(0, 0, 0, 0.00) 24%
         );
     }
 
@@ -1160,18 +1168,9 @@
 
 
       function makeDrop(
-        depth
+        config
       ) {
-        const isNear =
-          depth > 0.75;
-
-        const isFar =
-          depth < 0.40;
-
         return {
-          depth:
-            depth,
-
           x:
             Math.random() *
             window.innerWidth,
@@ -1181,93 +1180,56 @@
             window.innerHeight,
 
           len:
-            isNear
-            ?
-            24 +
+            config.lenMin +
             Math.random() *
-            30
-            :
             (
-              isFar
-              ?
-              7 +
-              Math.random() *
-              10
-              :
-              14 +
-              Math.random() *
-              18
+              config.lenMax -
+              config.lenMin
             ),
 
           speed:
-            isNear
-            ?
-            1150 +
+            config.speedMin +
             Math.random() *
-            650
-            :
             (
-              isFar
-              ?
-              380 +
-              Math.random() *
-              240
-              :
-              720 +
-              Math.random() *
-              390
+              config.speedMax -
+              config.speedMin
             ),
 
           alpha:
-            isNear
-            ?
-            0.28 +
+            config.alphaMin +
             Math.random() *
-            0.30
-            :
             (
-              isFar
-              ?
-              0.08 +
-              Math.random() *
-              0.10
-              :
-              0.16 +
-              Math.random() *
-              0.18
+              config.alphaMax -
+              config.alphaMin
             ),
 
           width:
-            isNear
-            ?
-            1.25 +
+            config.widthMin +
             Math.random() *
-            0.75
-            :
             (
-              isFar
-              ?
-              0.55 +
-              Math.random() *
-              0.35
-              :
-              0.85 +
-              Math.random() *
-              0.45
+              config.widthMax -
+              config.widthMin
             ),
+
+          angle:
+            config.angleMin +
+            Math.random() *
+            (
+              config.angleMax -
+              config.angleMin
+            ),
+
+          drift:
+            (
+              Math.random() -
+              0.5
+            ) *
+            0.10,
 
           phase:
             Math.random() *
             Math.PI *
-            2,
-
-          bend:
-            (
-              Math.random() -
-              0.5
-            )
-            *
-            6
+            2
         };
       }
 
@@ -1279,74 +1241,168 @@
         layers = [
           {
             blur:
-              1.8,
+              3.0,
 
-            drops:
-              Array.from(
-                {
-                  length:
-                    Math.max(
-                      70,
-                      Math.round(
-                        w /
-                        13
-                      )
-                    )
-                },
-                function() {
-                  return makeDrop(
-                    0.25
-                  );
-                }
-              )
+            opacity:
+              0.50,
+
+            count:
+              Math.max(
+                55,
+                Math.round(
+                  w /
+                  22
+                )
+              ),
+
+            config: {
+              lenMin:
+                10,
+
+              lenMax:
+                18,
+
+              speedMin:
+                260,
+
+              speedMax:
+                420,
+
+              alphaMin:
+                0.030,
+
+              alphaMax:
+                0.070,
+
+              widthMin:
+                0.45,
+
+              widthMax:
+                0.75,
+
+              angleMin:
+                0.58,
+
+              angleMax:
+                0.72
+            }
           },
+
           {
             blur:
-              0.7,
+              1.7,
 
-            drops:
-              Array.from(
-                {
-                  length:
-                    Math.max(
-                      85,
-                      Math.round(
-                        w /
-                        10
-                      )
-                    )
-                },
-                function() {
-                  return makeDrop(
-                    0.58
-                  );
-                }
-              )
+            opacity:
+              0.70,
+
+            count:
+              Math.max(
+                70,
+                Math.round(
+                  w /
+                  16
+                )
+              ),
+
+            config: {
+              lenMin:
+                16,
+
+              lenMax:
+                28,
+
+              speedMin:
+                420,
+
+              speedMax:
+                680,
+
+              alphaMin:
+                0.055,
+
+              alphaMax:
+                0.110,
+
+              widthMin:
+                0.65,
+
+              widthMax:
+                1.00,
+
+              angleMin:
+                0.62,
+
+              angleMax:
+                0.80
+            }
           },
+
           {
             blur:
-              0,
+              0.8,
 
-            drops:
-              Array.from(
-                {
-                  length:
-                    Math.max(
-                      45,
-                      Math.round(
-                        w /
-                        20
-                      )
-                    )
-                },
-                function() {
-                  return makeDrop(
-                    0.92
-                  );
-                }
-              )
+            opacity:
+              0.92,
+
+            count:
+              Math.max(
+                40,
+                Math.round(
+                  w /
+                  30
+                )
+              ),
+
+            config: {
+              lenMin:
+                28,
+
+              lenMax:
+                44,
+
+              speedMin:
+                720,
+
+              speedMax:
+                1050,
+
+              alphaMin:
+                0.080,
+
+              alphaMax:
+                0.150,
+
+              widthMin:
+                0.95,
+
+              widthMax:
+                1.45,
+
+              angleMin:
+                0.68,
+
+              angleMax:
+                0.88
+            }
           }
         ];
+
+        layers.forEach(
+          function(layer) {
+            layer.drops =
+              Array.from(
+                {
+                  length:
+                    layer.count
+                },
+                function() {
+                  return makeDrop(
+                    layer.config
+                  );
+                }
+              );
+          }
+        );
       }
 
 
@@ -1401,14 +1457,18 @@
         width
       ) {
         drop.y =
-          -40 -
+          -50 -
           Math.random() *
           180;
 
         drop.x =
           Math.random() *
-          width +
-          80;
+          (
+            width +
+            140
+          )
+          -
+          70;
       }
 
 
@@ -1430,9 +1490,9 @@
         const endY =
           height *
           (
-            0.38 +
+            0.24 +
             Math.random() *
-            0.22
+            0.16
           );
 
         const points = [
@@ -1449,10 +1509,10 @@
           startX;
 
         const segments =
-          10 +
+          7 +
           Math.floor(
             Math.random() *
-            5
+            3
           );
 
         for (
@@ -1466,7 +1526,7 @@
               0.5
             )
             *
-            46;
+            24;
 
           points.push({
             x:
@@ -1481,75 +1541,14 @@
           });
         }
 
-        const branchIndex =
-          3 +
-          Math.floor(
-            Math.random() *
-            Math.max(
-              2,
-              segments - 6
-            )
-          );
-
-        const branchStart =
-          points[
-            branchIndex
-          ];
-
-        const branch = [
-          {
-            x:
-              branchStart.x,
-
-            y:
-              branchStart.y
-          }
-        ];
-
-        let bx =
-          branchStart.x;
-
-        let by =
-          branchStart.y;
-
-        for (
-          let i = 0;
-          i < 5;
-          i++
-        ) {
-          bx +=
-            (
-              Math.random() -
-              0.35
-            )
-            *
-            48;
-
-          by +=
-            18 +
-            Math.random() *
-            24;
-
-          branch.push({
-            x:
-              bx,
-
-            y:
-              by
-          });
-        }
-
         bolt = {
           points:
-            points,
-
-          branch:
-            branch
+            points
         };
 
         boltUntil =
           performance.now() +
-          220;
+          160;
       }
 
 
@@ -1572,68 +1571,282 @@
               now
             )
             /
-            220
+            160
           );
 
-        function drawPath(
-          points,
-          width,
-          opacity
+        ctx.save();
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+          bolt.points[0].x,
+          bolt.points[0].y
+        );
+
+        for (
+          let i = 1;
+          i < bolt.points.length;
+          i++
         ) {
-          ctx.save();
-
-          ctx.beginPath();
-
-          ctx.moveTo(
-            points[0].x,
-            points[0].y
+          ctx.lineTo(
+            bolt.points[i].x,
+            bolt.points[i].y
           );
-
-          for (
-            let i = 1;
-            i < points.length;
-            i++
-          ) {
-            ctx.lineTo(
-              points[i].x,
-              points[i].y
-            );
-          }
-
-          ctx.strokeStyle =
-            "rgba(238,247,255," +
-            (
-              alpha *
-              opacity
-            )
-            +
-            ")";
-
-          ctx.lineWidth =
-            width;
-
-          ctx.shadowColor =
-            "rgba(190,220,255,0.95)";
-
-          ctx.shadowBlur =
-            8;
-
-          ctx.stroke();
-
-          ctx.restore();
         }
 
-        drawPath(
-          bolt.points,
-          1.7,
-          0.58
+        ctx.strokeStyle =
+          "rgba(235,245,255," +
+          (
+            alpha *
+            0.24
+          )
+          +
+          ")";
+
+        ctx.lineWidth =
+          0.9;
+
+        ctx.shadowColor =
+          "rgba(200,225,255,0.25)";
+
+        ctx.shadowBlur =
+          4;
+
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+
+      function drawAtmosphere(
+        now
+      ) {
+        const width =
+          window.innerWidth;
+
+        const height =
+          window.innerHeight;
+
+        const pulse =
+          0.018 *
+          (
+            1 +
+            Math.sin(
+              now *
+              0.00045
+            )
+          );
+
+        ctx.save();
+
+        ctx.globalCompositeOperation =
+          "screen";
+
+        const topGradient =
+          ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            height *
+            0.52
+          );
+
+        topGradient.addColorStop(
+          0,
+          "rgba(220,230,245," +
+          (
+            0.012 +
+            pulse
+          )
+          +
+          ")"
         );
 
-        drawPath(
-          bolt.branch,
-          0.9,
-          0.34
+        topGradient.addColorStop(
+          0.35,
+          "rgba(220,230,245,0.010)"
         );
+
+        topGradient.addColorStop(
+          1,
+          "rgba(220,230,245,0)"
+        );
+
+        ctx.fillStyle =
+          topGradient;
+
+        ctx.fillRect(
+          0,
+          0,
+          width,
+          height *
+          0.52
+        );
+
+        ctx.restore();
+      }
+
+
+      function drawRainLayer(
+        layer,
+        now,
+        dt
+      ) {
+        const width =
+          window.innerWidth;
+
+        const height =
+          window.innerHeight;
+
+        const wind =
+          0.16 +
+          0.035 *
+          Math.sin(
+            now *
+            0.00055
+          );
+
+        ctx.save();
+
+        ctx.filter =
+          layer.blur > 0
+          ?
+          "blur(" +
+          layer.blur +
+          "px)"
+          :
+          "none";
+
+        ctx.lineCap =
+          "round";
+
+        ctx.globalCompositeOperation =
+          "screen";
+
+        layer.drops.forEach(
+          function(drop) {
+            drop.y +=
+              drop.speed *
+              dt;
+
+            drop.x -=
+              drop.speed *
+              wind *
+              dt;
+
+            if (
+              drop.y >
+              height +
+              70
+              ||
+              drop.x <
+              -140
+            ) {
+              resetDrop(
+                drop,
+                width
+              );
+            }
+
+            const angleShift =
+              0.018 *
+              Math.sin(
+                now *
+                0.0009 +
+                drop.phase
+              );
+
+            const angle =
+              drop.angle +
+              angleShift +
+              drop.drift;
+
+            const dx =
+              -Math.sin(
+                angle
+              )
+              *
+              drop.len;
+
+            const dy =
+              Math.cos(
+                angle
+              )
+              *
+              drop.len;
+
+            const x2 =
+              drop.x +
+              dx;
+
+            const y2 =
+              drop.y +
+              dy;
+
+            const grad =
+              ctx.createLinearGradient(
+                drop.x,
+                drop.y,
+                x2,
+                y2
+              );
+
+            grad.addColorStop(
+              0,
+              "rgba(225,235,255,0)"
+            );
+
+            grad.addColorStop(
+              0.28,
+              "rgba(225,235,255," +
+              (
+                drop.alpha *
+                0.22 *
+                layer.opacity
+              )
+              +
+              ")"
+            );
+
+            grad.addColorStop(
+              0.72,
+              "rgba(225,235,255," +
+              (
+                drop.alpha *
+                layer.opacity
+              )
+              +
+              ")"
+            );
+
+            grad.addColorStop(
+              1,
+              "rgba(225,235,255,0)"
+            );
+
+            ctx.strokeStyle =
+              grad;
+
+            ctx.lineWidth =
+              drop.width;
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+              drop.x,
+              drop.y
+            );
+
+            ctx.lineTo(
+              x2,
+              y2
+            );
+
+            ctx.stroke();
+          }
+        );
+
+        ctx.restore();
       }
 
 
@@ -1680,123 +1893,17 @@
           height
         );
 
-        const gust =
-          Math.sin(
-            now *
-            0.00055
-          )
-          *
-          0.035;
+        drawAtmosphere(
+          now
+        );
 
         layers.forEach(
           function(layer) {
-            ctx.save();
-
-            ctx.filter =
-              layer.blur > 0
-              ?
-              "blur(" +
-              layer.blur +
-              "px)"
-              :
-              "none";
-
-            ctx.lineCap =
-              "round";
-
-            layer.drops.forEach(
-              function(drop) {
-                const sway =
-                  Math.sin(
-                    now *
-                    0.0020 +
-                    drop.phase
-                  )
-                  *
-                  (
-                    1.2 +
-                    drop.depth *
-                    2.0
-                  );
-
-                const horizontal =
-                  -drop.speed *
-                  (
-                    0.075 +
-                    gust
-                  );
-
-                drop.y +=
-                  drop.speed *
-                  dt;
-
-                drop.x +=
-                  horizontal *
-                  dt;
-
-                if (
-                  drop.y >
-                  height +
-                  70
-                  ||
-                  drop.x <
-                  -120
-                ) {
-                  resetDrop(
-                    drop,
-                    width
-                  );
-                }
-
-                const dx =
-                  -drop.len *
-                  (
-                    0.12 +
-                    gust *
-                    0.9
-                  );
-
-                const x2 =
-                  drop.x +
-                  dx;
-
-                const y2 =
-                  drop.y +
-                  drop.len;
-
-                ctx.strokeStyle =
-                  "rgba(218,234,255," +
-                  drop.alpha +
-                  ")";
-
-                ctx.lineWidth =
-                  drop.width;
-
-                ctx.beginPath();
-
-                ctx.moveTo(
-                  drop.x,
-                  drop.y
-                );
-
-                ctx.quadraticCurveTo(
-                  drop.x +
-                  dx *
-                  0.52 +
-                  sway +
-                  drop.bend,
-                  drop.y +
-                  drop.len *
-                  0.48,
-                  x2,
-                  y2
-                );
-
-                ctx.stroke();
-              }
+            drawRainLayer(
+              layer,
+              now,
+              dt
             );
-
-            ctx.restore();
           }
         );
 
@@ -1826,18 +1933,18 @@
         flash.style.background =
           "radial-gradient(circle at " +
           x +
-          "% 5%, " +
-          "rgba(255,255,255,0.72) 0%, " +
-          "rgba(210,230,255,0.38) 12%, " +
-          "rgba(160,195,255,0.12) 30%, " +
-          "rgba(255,255,255,0) 65%)";
+          "% 6%, " +
+          "rgba(255,255,255,0.42) 0%, " +
+          "rgba(210,230,255,0.15) 14%, " +
+          "rgba(160,195,255,0.04) 32%, " +
+          "rgba(255,255,255,0) 68%)";
 
         flash.style.display =
           "block";
 
         if (
           Math.random() <
-          0.42
+          0.18
         ) {
           generateBolt();
         }
@@ -1854,15 +1961,15 @@
             },
             {
               opacity:
-                0.38
+                0.16
             },
             {
               opacity:
-                0.05
+                0.02
             },
             {
               opacity:
-                0.22
+                0.08
             },
             {
               opacity:
@@ -1871,7 +1978,7 @@
           ],
           {
             duration:
-              520,
+              460,
 
             easing:
               "ease-out"
@@ -1900,9 +2007,9 @@
         lightningTimer =
           window.setTimeout(
             flashLightning,
-            6500 +
+            8500 +
             Math.random() *
-            6500
+            8500
           );
       }
 
@@ -2072,10 +2179,10 @@
             {
               length:
                 Math.max(
-                  110,
+                  55,
                   Math.round(
                     window.innerWidth /
-                    8
+                    24
                   )
                 )
             },
@@ -2087,13 +2194,15 @@
 
                 y:
                   Math.random() *
-                  window.innerHeight *
-                  0.24,
+                  (
+                    window.innerHeight *
+                    0.16
+                  ),
 
                 r:
                   0.45 +
                   Math.random() *
-                  1.25,
+                  0.95,
 
                 phase:
                   Math.random() *
@@ -2101,14 +2210,14 @@
                   2,
 
                 speed:
-                  0.0007 +
+                  0.0008 +
                   Math.random() *
-                  0.0014,
+                  0.0010,
 
                 alpha:
-                  0.35 +
+                  0.20 +
                   Math.random() *
-                  0.65
+                  0.40
               };
             }
           );
@@ -2134,8 +2243,8 @@
         stars.forEach(
           function(star) {
             const twinkle =
-              0.55 +
-              0.45 *
+              0.72 +
+              0.28 *
               Math.sin(
                 now *
                 star.speed +
@@ -2163,15 +2272,15 @@
               ")";
 
             starCtx.shadowColor =
-              "rgba(210,230,255,0.95)";
+              "rgba(220,235,255,0.55)";
 
             starCtx.shadowBlur =
               star.r >
-              1.15
+              1
               ?
-              5
+              3
               :
-              2;
+              1.5;
 
             starCtx.fill();
           }
@@ -2450,68 +2559,6 @@
       }
 
 
-      function startFinalSlideOrbit(
-        index
-      ) {
-        if (
-          index !==
-          slideEntries.length - 1
-        ) {
-          return;
-        }
-
-        window.setTimeout(
-          async function() {
-            if (
-              currentIndex !==
-              slideEntries.length - 1
-            ) {
-              return;
-            }
-
-            try {
-              const camera =
-                view.camera.clone();
-
-              camera.heading =
-                (
-                  camera.heading -
-                  10 +
-                  360
-                )
-                %
-                360;
-
-              camera.tilt =
-                Math.min(
-                  82,
-                  camera.tilt +
-                  1.5
-                );
-
-              await view.goTo(
-                camera,
-                {
-                  duration:
-                    8500,
-
-                  maxDuration:
-                    9000,
-
-                  easing:
-                    "linear"
-                }
-              );
-            }
-            catch (error) {
-              // Un changement de slide annule naturellement l'animation.
-            }
-          },
-          350
-        );
-      }
-
-
       let slideTransitionRunning =
         false;
 
@@ -2636,10 +2683,6 @@
           );
 
           applySlideEnhancements(
-            index
-          );
-
-          startFinalSlideOrbit(
             index
           );
 
