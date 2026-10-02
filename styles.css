@@ -246,15 +246,47 @@ html,
     }
 
     #starCanvas {
-      display: none !important;
+      z-index: 88;
+      display: none;
+      opacity: 0.78;
+      mix-blend-mode: screen;
+
+      /* Renfort étoilé strictement limité à la bande haute du ciel. */
+      clip-path:
+        polygon(
+          0 0,
+          100% 0,
+          100% 17%,
+          0 21%
+        );
+
+      -webkit-mask-image:
+        linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 0.96) 9%,
+          rgba(0, 0, 0, 0.62) 14%,
+          rgba(0, 0, 0, 0.18) 18%,
+          rgba(0, 0, 0, 0) 21%
+        );
+
+      mask-image:
+        linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 0.96) 9%,
+          rgba(0, 0, 0, 0.62) 14%,
+          rgba(0, 0, 0, 0.18) 18%,
+          rgba(0, 0, 0, 0) 21%
+        );
     }
 
     #weatherCanvas {
       z-index: 90;
       display: none;
-      opacity: 0.90;
+      opacity: 0.96;
       mix-blend-mode: screen;
-      filter: blur(0.15px);
+      filter: blur(0.22px);
     }
 
     #lightningFlash {
