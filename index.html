@@ -42,6 +42,9 @@
         saturate(1.07);
     }
 
+    #sunRays,
+    #nightTint,
+    #starCanvas,
     #weatherCanvas,
     #lightningFlash {
       position: absolute;
@@ -49,6 +52,94 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
+    }
+
+    #sunRays {
+      z-index: 86;
+      display: none;
+      opacity: 0;
+      overflow: hidden;
+      mix-blend-mode: screen;
+      background:
+        radial-gradient(
+          circle at 12% 5%,
+          rgba(255, 250, 210, 0.52) 0%,
+          rgba(255, 244, 185, 0.20) 18%,
+          rgba(255, 244, 185, 0.00) 42%
+        ),
+        conic-gradient(
+          from 112deg at 10% 0%,
+          transparent 0deg,
+          rgba(255, 248, 210, 0.00) 8deg,
+          rgba(255, 248, 210, 0.18) 14deg,
+          rgba(255, 248, 210, 0.00) 23deg,
+          transparent 34deg,
+          rgba(255, 248, 210, 0.14) 43deg,
+          transparent 54deg
+        );
+      filter: blur(6px);
+      animation:
+        sunRaysPulse
+        6.5s
+        ease-in-out
+        infinite
+        alternate;
+    }
+
+    #sunRays.active {
+      display: block;
+      opacity: 0.78;
+    }
+
+    @keyframes sunRaysPulse {
+      from {
+        opacity: 0.58;
+        transform: scale(1.00) translate3d(0, 0, 0);
+      }
+
+      to {
+        opacity: 0.82;
+        transform: scale(1.035) translate3d(8px, 4px, 0);
+      }
+    }
+
+    #nightTint {
+      z-index: 87;
+      display: none;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(3, 9, 28, 0.32) 0%,
+          rgba(5, 12, 34, 0.20) 45%,
+          rgba(3, 8, 24, 0.13) 100%
+        );
+      mix-blend-mode: multiply;
+    }
+
+    #nightTint.active {
+      display: block;
+    }
+
+    #starCanvas {
+      z-index: 88;
+      display: none;
+      opacity: 0.95;
+      -webkit-mask-image:
+        linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 1) 42%,
+          rgba(0, 0, 0, 0.45) 58%,
+          rgba(0, 0, 0, 0) 72%
+        );
+      mask-image:
+        linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 1) 42%,
+          rgba(0, 0, 0, 0.45) 58%,
+          rgba(0, 0, 0, 0) 72%
+        );
     }
 
     #weatherCanvas {
@@ -60,15 +151,15 @@
       z-index: 91;
       display: none;
       opacity: 0;
+      mix-blend-mode: screen;
       background:
         radial-gradient(
-          circle at 52% 8%,
-          rgba(255, 255, 255, 0.92) 0%,
-          rgba(220, 235, 255, 0.55) 12%,
-          rgba(190, 215, 255, 0.18) 30%,
-          rgba(255, 255, 255, 0) 62%
+          circle at 52% 5%,
+          rgba(255, 255, 255, 0.98) 0%,
+          rgba(215, 232, 255, 0.62) 13%,
+          rgba(175, 205, 255, 0.20) 32%,
+          rgba(255, 255, 255, 0) 64%
         );
-      mix-blend-mode: screen;
     }
 
     /* Aucun cartouche "Mobilité 3D / 13 véhicules". */
@@ -257,6 +348,9 @@
 <body>
   <div id="viewDiv"></div>
 
+  <div id="sunRays"></div>
+  <div id="nightTint"></div>
+  <canvas id="starCanvas"></canvas>
   <canvas id="weatherCanvas"></canvas>
   <div id="lightningFlash"></div>
 
@@ -907,10 +1001,10 @@
                 // On ne touche ni à la couleur ni au matériau :
                 // les reflets et jeux de lumière restent ceux d'Esri.
                 symbolLayer.waterbodySize =
-                  "small";
+                  "medium";
 
                 symbolLayer.waveStrength =
-                  "slight";
+                  "moderate";
 
                 if (
                   symbolLayer.waveDirection == null
@@ -999,7 +1093,7 @@
               phase
             )
             *
-            2.5;
+            4.5;
 
           liveWaterLayers.forEach(
             function(item) {
@@ -1038,7 +1132,7 @@
       let active =
         false;
 
-      let drops =
+      let layers =
         [];
 
       let animationHandle =
@@ -1046,6 +1140,207 @@
 
       let lightningTimer =
         null;
+
+      let lastFrameTime =
+        0;
+
+      let boltUntil =
+        0;
+
+      let bolt =
+        null;
+
+
+      function makeDrop(
+        depth
+      ) {
+        const isNear =
+          depth > 0.75;
+
+        const isFar =
+          depth < 0.40;
+
+        return {
+          depth:
+            depth,
+
+          x:
+            Math.random() *
+            window.innerWidth,
+
+          y:
+            Math.random() *
+            window.innerHeight,
+
+          len:
+            isNear
+            ?
+            24 +
+            Math.random() *
+            30
+            :
+            (
+              isFar
+              ?
+              7 +
+              Math.random() *
+              10
+              :
+              14 +
+              Math.random() *
+              18
+            ),
+
+          speed:
+            isNear
+            ?
+            1150 +
+            Math.random() *
+            650
+            :
+            (
+              isFar
+              ?
+              380 +
+              Math.random() *
+              240
+              :
+              720 +
+              Math.random() *
+              390
+            ),
+
+          alpha:
+            isNear
+            ?
+            0.28 +
+            Math.random() *
+            0.30
+            :
+            (
+              isFar
+              ?
+              0.08 +
+              Math.random() *
+              0.10
+              :
+              0.16 +
+              Math.random() *
+              0.18
+            ),
+
+          width:
+            isNear
+            ?
+            1.25 +
+            Math.random() *
+            0.75
+            :
+            (
+              isFar
+              ?
+              0.55 +
+              Math.random() *
+              0.35
+              :
+              0.85 +
+              Math.random() *
+              0.45
+            ),
+
+          phase:
+            Math.random() *
+            Math.PI *
+            2,
+
+          bend:
+            (
+              Math.random() -
+              0.5
+            )
+            *
+            6
+        };
+      }
+
+
+      function buildRainLayers() {
+        const w =
+          window.innerWidth;
+
+        layers = [
+          {
+            blur:
+              1.8,
+
+            drops:
+              Array.from(
+                {
+                  length:
+                    Math.max(
+                      70,
+                      Math.round(
+                        w /
+                        13
+                      )
+                    )
+                },
+                function() {
+                  return makeDrop(
+                    0.25
+                  );
+                }
+              )
+          },
+          {
+            blur:
+              0.7,
+
+            drops:
+              Array.from(
+                {
+                  length:
+                    Math.max(
+                      85,
+                      Math.round(
+                        w /
+                        10
+                      )
+                    )
+                },
+                function() {
+                  return makeDrop(
+                    0.58
+                  );
+                }
+              )
+          },
+          {
+            blur:
+              0,
+
+            drops:
+              Array.from(
+                {
+                  length:
+                    Math.max(
+                      45,
+                      Math.round(
+                        w /
+                        20
+                      )
+                    )
+                },
+                function() {
+                  return makeDrop(
+                    0.92
+                  );
+                }
+              )
+          }
+        ];
+      }
+
 
       function resize() {
         const dpr =
@@ -1089,46 +1384,250 @@
           0
         );
 
-        drops =
-          Array.from(
-            {
-              length:
-                Math.max(
-                  90,
-                  Math.round(
-                    window.innerWidth /
-                    8
-                  )
-                )
-            },
-            function() {
-              return {
-                x:
-                  Math.random() *
-                  window.innerWidth,
-
-                y:
-                  Math.random() *
-                  window.innerHeight,
-
-                len:
-                  12 +
-                  Math.random() *
-                  18,
-
-                speed:
-                  650 +
-                  Math.random() *
-                  520,
-
-                alpha:
-                  0.20 +
-                  Math.random() *
-                  0.28
-              };
-            }
-          );
+        buildRainLayers();
       }
+
+
+      function resetDrop(
+        drop,
+        width
+      ) {
+        drop.y =
+          -40 -
+          Math.random() *
+          180;
+
+        drop.x =
+          Math.random() *
+          width +
+          80;
+      }
+
+
+      function generateBolt() {
+        const width =
+          window.innerWidth;
+
+        const height =
+          window.innerHeight;
+
+        const startX =
+          width *
+          (
+            0.20 +
+            Math.random() *
+            0.60
+          );
+
+        const endY =
+          height *
+          (
+            0.38 +
+            Math.random() *
+            0.22
+          );
+
+        const points = [
+          {
+            x:
+              startX,
+
+            y:
+              -10
+          }
+        ];
+
+        let x =
+          startX;
+
+        const segments =
+          10 +
+          Math.floor(
+            Math.random() *
+            5
+          );
+
+        for (
+          let i = 1;
+          i <= segments;
+          i++
+        ) {
+          x +=
+            (
+              Math.random() -
+              0.5
+            )
+            *
+            46;
+
+          points.push({
+            x:
+              x,
+
+            y:
+              endY *
+              (
+                i /
+                segments
+              )
+          });
+        }
+
+        const branchIndex =
+          3 +
+          Math.floor(
+            Math.random() *
+            Math.max(
+              2,
+              segments - 6
+            )
+          );
+
+        const branchStart =
+          points[
+            branchIndex
+          ];
+
+        const branch = [
+          {
+            x:
+              branchStart.x,
+
+            y:
+              branchStart.y
+          }
+        ];
+
+        let bx =
+          branchStart.x;
+
+        let by =
+          branchStart.y;
+
+        for (
+          let i = 0;
+          i < 5;
+          i++
+        ) {
+          bx +=
+            (
+              Math.random() -
+              0.35
+            )
+            *
+            48;
+
+          by +=
+            18 +
+            Math.random() *
+            24;
+
+          branch.push({
+            x:
+              bx,
+
+            y:
+              by
+          });
+        }
+
+        bolt = {
+          points:
+            points,
+
+          branch:
+            branch
+        };
+
+        boltUntil =
+          performance.now() +
+          220;
+      }
+
+
+      function drawBolt(
+        now
+      ) {
+        if (
+          !bolt ||
+          now >
+          boltUntil
+        ) {
+          return;
+        }
+
+        const alpha =
+          Math.max(
+            0,
+            (
+              boltUntil -
+              now
+            )
+            /
+            220
+          );
+
+        function drawPath(
+          points,
+          width,
+          opacity
+        ) {
+          ctx.save();
+
+          ctx.beginPath();
+
+          ctx.moveTo(
+            points[0].x,
+            points[0].y
+          );
+
+          for (
+            let i = 1;
+            i < points.length;
+            i++
+          ) {
+            ctx.lineTo(
+              points[i].x,
+              points[i].y
+            );
+          }
+
+          ctx.strokeStyle =
+            "rgba(238,247,255," +
+            (
+              alpha *
+              opacity
+            )
+            +
+            ")";
+
+          ctx.lineWidth =
+            width;
+
+          ctx.shadowColor =
+            "rgba(190,220,255,0.95)";
+
+          ctx.shadowBlur =
+            16;
+
+          ctx.stroke();
+
+          ctx.restore();
+        }
+
+        drawPath(
+          bolt.points,
+          3.0,
+          1
+        );
+
+        drawPath(
+          bolt.branch,
+          1.6,
+          0.75
+        );
+      }
+
 
       function drawRain(
         now
@@ -1138,6 +1637,27 @@
         ) {
           return;
         }
+
+        if (
+          !lastFrameTime
+        ) {
+          lastFrameTime =
+            now;
+        }
+
+        const dt =
+          Math.min(
+            (
+              now -
+              lastFrameTime
+            )
+            /
+            1000,
+            0.04
+          );
+
+        lastFrameTime =
+          now;
 
         const width =
           window.innerWidth;
@@ -1152,68 +1672,128 @@
           height
         );
 
-        ctx.lineWidth =
-          1.15;
+        const gust =
+          Math.sin(
+            now *
+            0.00055
+          )
+          *
+          0.035;
 
-        ctx.lineCap =
-          "round";
+        layers.forEach(
+          function(layer) {
+            ctx.save();
 
-        const dt =
-          1 /
-          60;
+            ctx.filter =
+              layer.blur > 0
+              ?
+              "blur(" +
+              layer.blur +
+              "px)"
+              :
+              "none";
 
-        drops.forEach(
-          function(drop) {
-            drop.y +=
-              drop.speed *
-              dt;
+            ctx.lineCap =
+              "round";
 
-            drop.x -=
-              drop.speed *
-              0.10 *
-              dt;
+            layer.drops.forEach(
+              function(drop) {
+                const sway =
+                  Math.sin(
+                    now *
+                    0.0020 +
+                    drop.phase
+                  )
+                  *
+                  (
+                    1.2 +
+                    drop.depth *
+                    2.0
+                  );
 
-            if (
-              drop.y >
-              height +
-              30
-              ||
-              drop.x <
-              -30
-            ) {
-              drop.y =
-                -30 -
-                Math.random() *
-                120;
+                const horizontal =
+                  -drop.speed *
+                  (
+                    0.075 +
+                    gust
+                  );
 
-              drop.x =
-                Math.random() *
-                width +
-                30;
-            }
+                drop.y +=
+                  drop.speed *
+                  dt;
 
-            ctx.strokeStyle =
-              "rgba(220,235,255," +
-              drop.alpha +
-              ")";
+                drop.x +=
+                  horizontal *
+                  dt;
 
-            ctx.beginPath();
+                if (
+                  drop.y >
+                  height +
+                  70
+                  ||
+                  drop.x <
+                  -120
+                ) {
+                  resetDrop(
+                    drop,
+                    width
+                  );
+                }
 
-            ctx.moveTo(
-              drop.x,
-              drop.y
+                const dx =
+                  -drop.len *
+                  (
+                    0.12 +
+                    gust *
+                    0.9
+                  );
+
+                const x2 =
+                  drop.x +
+                  dx;
+
+                const y2 =
+                  drop.y +
+                  drop.len;
+
+                ctx.strokeStyle =
+                  "rgba(218,234,255," +
+                  drop.alpha +
+                  ")";
+
+                ctx.lineWidth =
+                  drop.width;
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                  drop.x,
+                  drop.y
+                );
+
+                ctx.quadraticCurveTo(
+                  drop.x +
+                  dx *
+                  0.52 +
+                  sway +
+                  drop.bend,
+                  drop.y +
+                  drop.len *
+                  0.48,
+                  x2,
+                  y2
+                );
+
+                ctx.stroke();
+              }
             );
 
-            ctx.lineTo(
-              drop.x -
-              drop.len *
-              0.20,
-              drop.y +
-              drop.len
-            );
-
-            ctx.stroke();
+            ctx.restore();
           }
+        );
+
+        drawBolt(
+          now
         );
 
         animationHandle =
@@ -1222,6 +1802,7 @@
           );
       }
 
+
       function flashLightning() {
         if (
           !active
@@ -1229,8 +1810,24 @@
           return;
         }
 
+        const x =
+          18 +
+          Math.random() *
+          64;
+
+        flash.style.background =
+          "radial-gradient(circle at " +
+          x +
+          "% 5%, " +
+          "rgba(255,255,255,0.98) 0%, " +
+          "rgba(210,230,255,0.70) 12%, " +
+          "rgba(160,195,255,0.22) 30%, " +
+          "rgba(255,255,255,0) 65%)";
+
         flash.style.display =
           "block";
+
+        generateBolt();
 
         flash.animate(
           [
@@ -1240,15 +1837,23 @@
             },
             {
               opacity:
-                0.58
+                0.92
             },
             {
               opacity:
-                0.08
+                0.10
             },
             {
               opacity:
-                0.42
+                0.62
+            },
+            {
+              opacity:
+                0.04
+            },
+            {
+              opacity:
+                0.28
             },
             {
               opacity:
@@ -1257,7 +1862,7 @@
           ],
           {
             duration:
-              430,
+              620,
 
             easing:
               "ease-out"
@@ -1266,6 +1871,7 @@
 
         scheduleLightning();
       }
+
 
       function scheduleLightning() {
         if (
@@ -1285,11 +1891,12 @@
         lightningTimer =
           window.setTimeout(
             flashLightning,
-            4200 +
+            3000 +
             Math.random() *
-            6500
+            5000
           );
       }
+
 
       function start() {
         if (
@@ -1300,6 +1907,9 @@
 
         active =
           true;
+
+        lastFrameTime =
+          0;
 
         resize();
 
@@ -1316,6 +1926,7 @@
 
         scheduleLightning();
       }
+
 
       function stop() {
         active =
@@ -1351,6 +1962,7 @@
         }
       }
 
+
       window.addEventListener(
         "resize",
         function() {
@@ -1362,12 +1974,296 @@
         }
       );
 
+
       return {
         start:
           start,
 
         stop:
           stop
+      };
+    }
+
+
+    function createAmbientEffectsController() {
+      const sun =
+        document.getElementById(
+          "sunRays"
+        );
+
+      const night =
+        document.getElementById(
+          "nightTint"
+        );
+
+      const starCanvas =
+        document.getElementById(
+          "starCanvas"
+        );
+
+      const starCtx =
+        starCanvas.getContext(
+          "2d"
+        );
+
+      let stars =
+        [];
+
+      let starAnimation =
+        null;
+
+      let nightActive =
+        false;
+
+
+      function resizeStars() {
+        const dpr =
+          Math.min(
+            window.devicePixelRatio || 1,
+            2
+          );
+
+        starCanvas.width =
+          Math.max(
+            1,
+            Math.floor(
+              window.innerWidth *
+              dpr
+            )
+          );
+
+        starCanvas.height =
+          Math.max(
+            1,
+            Math.floor(
+              window.innerHeight *
+              dpr
+            )
+          );
+
+        starCanvas.style.width =
+          window.innerWidth +
+          "px";
+
+        starCanvas.style.height =
+          window.innerHeight +
+          "px";
+
+        starCtx.setTransform(
+          dpr,
+          0,
+          0,
+          dpr,
+          0,
+          0
+        );
+
+        stars =
+          Array.from(
+            {
+              length:
+                Math.max(
+                  110,
+                  Math.round(
+                    window.innerWidth /
+                    8
+                  )
+                )
+            },
+            function() {
+              return {
+                x:
+                  Math.random() *
+                  window.innerWidth,
+
+                y:
+                  Math.random() *
+                  window.innerHeight *
+                  0.58,
+
+                r:
+                  0.45 +
+                  Math.random() *
+                  1.25,
+
+                phase:
+                  Math.random() *
+                  Math.PI *
+                  2,
+
+                speed:
+                  0.0007 +
+                  Math.random() *
+                  0.0014,
+
+                alpha:
+                  0.35 +
+                  Math.random() *
+                  0.65
+              };
+            }
+          );
+      }
+
+
+      function drawStars(
+        now
+      ) {
+        if (
+          !nightActive
+        ) {
+          return;
+        }
+
+        starCtx.clearRect(
+          0,
+          0,
+          window.innerWidth,
+          window.innerHeight
+        );
+
+        stars.forEach(
+          function(star) {
+            const twinkle =
+              0.55 +
+              0.45 *
+              Math.sin(
+                now *
+                star.speed +
+                star.phase
+              );
+
+            const alpha =
+              star.alpha *
+              twinkle;
+
+            starCtx.beginPath();
+
+            starCtx.arc(
+              star.x,
+              star.y,
+              star.r,
+              0,
+              Math.PI *
+              2
+            );
+
+            starCtx.fillStyle =
+              "rgba(235,244,255," +
+              alpha +
+              ")";
+
+            starCtx.shadowColor =
+              "rgba(210,230,255,0.95)";
+
+            starCtx.shadowBlur =
+              star.r >
+              1.15
+              ?
+              5
+              :
+              2;
+
+            starCtx.fill();
+          }
+        );
+
+        starAnimation =
+          requestAnimationFrame(
+            drawStars
+          );
+      }
+
+
+      function setSun(
+        enabled
+      ) {
+        sun.classList.toggle(
+          "active",
+          Boolean(
+            enabled
+          )
+        );
+      }
+
+
+      function setNight(
+        enabled
+      ) {
+        const next =
+          Boolean(
+            enabled
+          );
+
+        if (
+          next ===
+          nightActive
+        ) {
+          return;
+        }
+
+        nightActive =
+          next;
+
+        night.classList.toggle(
+          "active",
+          next
+        );
+
+        starCanvas.style.display =
+          next
+          ?
+          "block"
+          :
+          "none";
+
+        if (
+          next
+        ) {
+          resizeStars();
+
+          starAnimation =
+            requestAnimationFrame(
+              drawStars
+            );
+        }
+        else {
+          if (
+            starAnimation
+          ) {
+            cancelAnimationFrame(
+              starAnimation
+            );
+          }
+
+          starCtx.clearRect(
+            0,
+            0,
+            window.innerWidth,
+            window.innerHeight
+          );
+        }
+      }
+
+
+      window.addEventListener(
+        "resize",
+        function() {
+          if (
+            nightActive
+          ) {
+            resizeStars();
+          }
+        }
+      );
+
+
+      return {
+        setSun:
+          setSun,
+
+        setNight:
+          setNight
       };
     }
 
@@ -1381,7 +2277,8 @@
       view,
       roadVehicleLayer,
       boatLayer,
-      weatherController
+      weatherController,
+      ambientController
     ) {
       const presentation =
         webscene.presentation;
@@ -1495,6 +2392,14 @@
               rainStopIndex
           );
 
+        const nightActive =
+          index >=
+          starStartIndex;
+
+        const sunActive =
+          index <=
+          1;
+
         if (
           rainActive
         ) {
@@ -1504,15 +2409,17 @@
           weatherController.stop();
         }
 
-        // Les deux dernières slides gardent l'environnement
-        // enregistré dans la Web Scene, mais on active les étoiles.
-        if (
-          index >=
-          starStartIndex
-        ) {
-          view.environment.starsEnabled =
-            true;
-        }
+        ambientController.setSun(
+          sunActive
+        );
+
+        ambientController.setNight(
+          nightActive
+        );
+
+        // Étoiles natives Esri + overlay étoilé discret.
+        view.environment.starsEnabled =
+          nightActive;
 
         console.log(
           "Effets slide :",
@@ -1521,12 +2428,80 @@
             rain:
               rainActive,
 
+            sunRays:
+              sunActive,
+
+            night:
+              nightActive,
+
             stars:
-              index >=
-              starStartIndex
+              nightActive
           }
         );
       }
+
+
+      function startFinalSlideOrbit(
+        index
+      ) {
+        if (
+          index !==
+          slideEntries.length - 1
+        ) {
+          return;
+        }
+
+        window.setTimeout(
+          async function() {
+            if (
+              currentIndex !==
+              slideEntries.length - 1
+            ) {
+              return;
+            }
+
+            try {
+              const camera =
+                view.camera.clone();
+
+              camera.heading =
+                (
+                  camera.heading -
+                  10 +
+                  360
+                )
+                %
+                360;
+
+              camera.tilt =
+                Math.min(
+                  82,
+                  camera.tilt +
+                  1.5
+                );
+
+              await view.goTo(
+                camera,
+                {
+                  duration:
+                    8500,
+
+                  maxDuration:
+                    9000,
+
+                  easing:
+                    "linear"
+                }
+              );
+            }
+            catch (error) {
+              // Un changement de slide annule naturellement l'animation.
+            }
+          },
+          350
+        );
+      }
+
 
       let slideTransitionRunning =
         false;
@@ -1652,6 +2627,10 @@
           );
 
           applySlideEnhancements(
+            index
+          );
+
+          startFinalSlideOrbit(
             index
           );
 
@@ -1994,6 +2973,9 @@
         const weatherController =
           createLocalWeatherController();
 
+        const ambientController =
+          createAmbientEffectsController();
+
         const webscene =
           new WebScene({
             portalItem: {
@@ -2091,7 +3073,8 @@
           view,
           roadVehicleLayer,
           boatLayer,
-          weatherController
+          weatherController,
+          ambientController
         );
 
         // ======================================================
