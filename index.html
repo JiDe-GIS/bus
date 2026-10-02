@@ -62,22 +62,25 @@
       mix-blend-mode: screen;
       background:
         radial-gradient(
-          circle at 12% 5%,
-          rgba(255, 250, 210, 0.52) 0%,
-          rgba(255, 244, 185, 0.20) 18%,
-          rgba(255, 244, 185, 0.00) 42%
+          circle at 11% 4%,
+          rgba(255, 252, 220, 0.72) 0%,
+          rgba(255, 246, 188, 0.32) 17%,
+          rgba(255, 246, 188, 0.00) 44%
         ),
         conic-gradient(
-          from 112deg at 10% 0%,
+          from 111deg at 8% -2%,
           transparent 0deg,
-          rgba(255, 248, 210, 0.00) 8deg,
-          rgba(255, 248, 210, 0.18) 14deg,
-          rgba(255, 248, 210, 0.00) 23deg,
-          transparent 34deg,
-          rgba(255, 248, 210, 0.14) 43deg,
-          transparent 54deg
+          rgba(255, 248, 210, 0.00) 5deg,
+          rgba(255, 248, 210, 0.30) 11deg,
+          rgba(255, 248, 210, 0.05) 19deg,
+          transparent 25deg,
+          rgba(255, 248, 210, 0.24) 32deg,
+          rgba(255, 248, 210, 0.02) 41deg,
+          transparent 49deg,
+          rgba(255, 248, 210, 0.18) 56deg,
+          transparent 67deg
         );
-      filter: blur(6px);
+      filter: blur(3.5px);
       animation:
         sunRaysPulse
         6.5s
@@ -88,18 +91,18 @@
 
     #sunRays.active {
       display: block;
-      opacity: 0.78;
+      opacity: 0.96;
     }
 
     @keyframes sunRaysPulse {
       from {
-        opacity: 0.58;
+        opacity: 0.76;
         transform: scale(1.00) translate3d(0, 0, 0);
       }
 
       to {
-        opacity: 0.82;
-        transform: scale(1.035) translate3d(8px, 4px, 0);
+        opacity: 0.98;
+        transform: scale(1.045) translate3d(10px, 5px, 0);
       }
     }
 
@@ -123,22 +126,27 @@
     #starCanvas {
       z-index: 88;
       display: none;
-      opacity: 0.95;
+      opacity: 0.82;
+
+      /* Les étoiles de renfort restent dans le ciel.
+         Les étoiles natives Esri restent actives derrière. */
       -webkit-mask-image:
         linear-gradient(
           to bottom,
           rgba(0, 0, 0, 1) 0%,
-          rgba(0, 0, 0, 1) 42%,
-          rgba(0, 0, 0, 0.45) 58%,
-          rgba(0, 0, 0, 0) 72%
+          rgba(0, 0, 0, 1) 15%,
+          rgba(0, 0, 0, 0.62) 20%,
+          rgba(0, 0, 0, 0.18) 25%,
+          rgba(0, 0, 0, 0) 29%
         );
       mask-image:
         linear-gradient(
           to bottom,
           rgba(0, 0, 0, 1) 0%,
-          rgba(0, 0, 0, 1) 42%,
-          rgba(0, 0, 0, 0.45) 58%,
-          rgba(0, 0, 0, 0) 72%
+          rgba(0, 0, 0, 1) 15%,
+          rgba(0, 0, 0, 0.62) 20%,
+          rgba(0, 0, 0, 0.18) 25%,
+          rgba(0, 0, 0, 0) 29%
         );
     }
 
@@ -1001,7 +1009,7 @@
                 // On ne touche ni à la couleur ni au matériau :
                 // les reflets et jeux de lumière restent ceux d'Esri.
                 symbolLayer.waterbodySize =
-                  "medium";
+                  "large";
 
                 symbolLayer.waveStrength =
                   "moderate";
@@ -1086,14 +1094,14 @@
       window.setInterval(
         function() {
           phase +=
-            0.16;
+            0.20;
 
           const offset =
             Math.sin(
               phase
             )
             *
-            4.5;
+            7.5;
 
           liveWaterLayers.forEach(
             function(item) {
@@ -1108,7 +1116,7 @@
             }
           );
         },
-        180
+        150
       );
     }
 
@@ -1608,7 +1616,7 @@
             "rgba(190,220,255,0.95)";
 
           ctx.shadowBlur =
-            16;
+            8;
 
           ctx.stroke();
 
@@ -1617,14 +1625,14 @@
 
         drawPath(
           bolt.points,
-          3.0,
-          1
+          1.7,
+          0.58
         );
 
         drawPath(
           bolt.branch,
-          1.6,
-          0.75
+          0.9,
+          0.34
         );
       }
 
@@ -1819,15 +1827,24 @@
           "radial-gradient(circle at " +
           x +
           "% 5%, " +
-          "rgba(255,255,255,0.98) 0%, " +
-          "rgba(210,230,255,0.70) 12%, " +
-          "rgba(160,195,255,0.22) 30%, " +
+          "rgba(255,255,255,0.72) 0%, " +
+          "rgba(210,230,255,0.38) 12%, " +
+          "rgba(160,195,255,0.12) 30%, " +
           "rgba(255,255,255,0) 65%)";
 
         flash.style.display =
           "block";
 
-        generateBolt();
+        if (
+          Math.random() <
+          0.42
+        ) {
+          generateBolt();
+        }
+        else {
+          bolt =
+            null;
+        }
 
         flash.animate(
           [
@@ -1837,23 +1854,15 @@
             },
             {
               opacity:
-                0.92
+                0.38
             },
             {
               opacity:
-                0.10
+                0.05
             },
             {
               opacity:
-                0.62
-            },
-            {
-              opacity:
-                0.04
-            },
-            {
-              opacity:
-                0.28
+                0.22
             },
             {
               opacity:
@@ -1862,7 +1871,7 @@
           ],
           {
             duration:
-              620,
+              520,
 
             easing:
               "ease-out"
@@ -1891,9 +1900,9 @@
         lightningTimer =
           window.setTimeout(
             flashLightning,
-            3000 +
+            6500 +
             Math.random() *
-            5000
+            6500
           );
       }
 
@@ -2079,7 +2088,7 @@
                 y:
                   Math.random() *
                   window.innerHeight *
-                  0.58,
+                  0.24,
 
                 r:
                   0.45 +
