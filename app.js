@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261002-SLIDER-RESTORE";
+      "SIG2026-20261002-TRAFFIC-WEATHER-SUN";
 
     console.log(
       "BUILD :",
@@ -788,12 +788,12 @@
       let boltUntil =
         0;
 
-      let bolt =
+      let boltPoints =
         null;
 
 
-      function makeDrop(
-        config
+      function createDrop(
+        layer
       ) {
         return {
           x:
@@ -804,211 +804,184 @@
             Math.random() *
             window.innerHeight,
 
-          len:
-            config.lenMin +
+          length:
+            layer.minLength +
             Math.random() *
             (
-              config.lenMax -
-              config.lenMin
+              layer.maxLength -
+              layer.minLength
             ),
 
           speed:
-            config.speedMin +
+            layer.minSpeed +
             Math.random() *
             (
-              config.speedMax -
-              config.speedMin
+              layer.maxSpeed -
+              layer.minSpeed
             ),
 
           alpha:
-            config.alphaMin +
+            layer.minAlpha +
             Math.random() *
             (
-              config.alphaMax -
-              config.alphaMin
+              layer.maxAlpha -
+              layer.minAlpha
             ),
 
           width:
-            config.widthMin +
+            layer.minWidth +
             Math.random() *
             (
-              config.widthMax -
-              config.widthMin
+              layer.maxWidth -
+              layer.minWidth
             ),
 
-          angle:
-            config.angleMin +
+          slant:
+            layer.minSlant +
             Math.random() *
             (
-              config.angleMax -
-              config.angleMin
-            ),
-
-          drift:
-            (
-              Math.random() -
-              0.5
-            ) *
-            0.10,
-
-          phase:
-            Math.random() *
-            Math.PI *
-            2
+              layer.maxSlant -
+              layer.minSlant
+            )
         };
       }
 
 
-      function buildRainLayers() {
-        const w =
+      function buildLayers() {
+        const width =
           window.innerWidth;
 
         layers = [
           {
             blur:
-              3.0,
-
-            opacity:
-              0.50,
+              2.7,
 
             count:
               Math.max(
-                55,
+                90,
                 Math.round(
-                  w /
-                  22
+                  width /
+                  13
                 )
               ),
 
-            config: {
-              lenMin:
-                10,
+            minLength:
+              7,
 
-              lenMax:
-                18,
+            maxLength:
+              15,
 
-              speedMin:
-                260,
+            minSpeed:
+              270,
 
-              speedMax:
-                420,
+            maxSpeed:
+              430,
 
-              alphaMin:
-                0.040,
+            minAlpha:
+              0.10,
 
-              alphaMax:
-                0.085,
+            maxAlpha:
+              0.20,
 
-              widthMin:
-                0.45,
+            minWidth:
+              0.45,
 
-              widthMax:
-                0.75,
+            maxWidth:
+              0.85,
 
-              angleMin:
-                0.66,
+            minSlant:
+              0.24,
 
-              angleMax:
-                0.80
-            }
+            maxSlant:
+              0.34
           },
 
           {
             blur:
-              1.7,
-
-            opacity:
-              0.70,
+              1.25,
 
             count:
               Math.max(
-                70,
+                80,
                 Math.round(
-                  w /
-                  16
+                  width /
+                  15
                 )
               ),
 
-            config: {
-              lenMin:
-                16,
+            minLength:
+              16,
 
-              lenMax:
-                28,
+            maxLength:
+              29,
 
-              speedMin:
-                420,
+            minSpeed:
+              470,
 
-              speedMax:
-                680,
+            maxSpeed:
+              720,
 
-              alphaMin:
-                0.070,
+            minAlpha:
+              0.13,
 
-              alphaMax:
-                0.135,
+            maxAlpha:
+              0.25,
 
-              widthMin:
-                0.65,
+            minWidth:
+              0.75,
 
-              widthMax:
-                1.00,
+            maxWidth:
+              1.20,
 
-              angleMin:
-                0.70,
+            minSlant:
+              0.28,
 
-              angleMax:
-                0.86
-            }
+            maxSlant:
+              0.39
           },
 
           {
             blur:
-              0.8,
-
-            opacity:
-              0.92,
+              0.35,
 
             count:
               Math.max(
-                40,
+                34,
                 Math.round(
-                  w /
-                  30
+                  width /
+                  34
                 )
               ),
 
-            config: {
-              lenMin:
-                28,
+            minLength:
+              34,
 
-              lenMax:
-                44,
+            maxLength:
+              58,
 
-              speedMin:
-                720,
+            minSpeed:
+              800,
 
-              speedMax:
-                1050,
+            maxSpeed:
+              1180,
 
-              alphaMin:
-                0.095,
+            minAlpha:
+              0.16,
 
-              alphaMax:
-                0.175,
+            maxAlpha:
+              0.31,
 
-              widthMin:
-                0.95,
+            minWidth:
+              1.20,
 
-              widthMax:
-                1.45,
+            maxWidth:
+              2.00,
 
-              angleMin:
-                0.74,
+            minSlant:
+              0.31,
 
-              angleMax:
-                0.92
-            }
+            maxSlant:
+              0.43
           }
         ];
 
@@ -1021,8 +994,8 @@
                     layer.count
                 },
                 function() {
-                  return makeDrop(
-                    layer.config
+                  return createDrop(
+                    layer
                   );
                 }
               );
@@ -1034,7 +1007,8 @@
       function resize() {
         const dpr =
           Math.min(
-            window.devicePixelRatio || 1,
+            window.devicePixelRatio ||
+            1,
             2
           );
 
@@ -1073,280 +1047,48 @@
           0
         );
 
-        buildRainLayers();
+        buildLayers();
       }
 
 
       function resetDrop(
-        drop,
-        width
+        drop
       ) {
         drop.y =
-          -50 -
+          -80 -
           Math.random() *
           180;
 
         drop.x =
           Math.random() *
           (
-            width +
-            140
-          )
-          -
-          70;
-      }
-
-
-      function generateBolt() {
-        const width =
-          window.innerWidth;
-
-        const height =
-          window.innerHeight;
-
-        const startX =
-          width *
-          (
-            0.20 +
-            Math.random() *
-            0.60
-          );
-
-        const endY =
-          height *
-          (
-            0.24 +
-            Math.random() *
-            0.16
-          );
-
-        const points = [
-          {
-            x:
-              startX,
-
-            y:
-              -10
-          }
-        ];
-
-        let x =
-          startX;
-
-        const segments =
-          7 +
-          Math.floor(
-            Math.random() *
-            3
-          );
-
-        for (
-          let i = 1;
-          i <= segments;
-          i++
-        ) {
-          x +=
-            (
-              Math.random() -
-              0.5
-            )
-            *
-            24;
-
-          points.push({
-            x:
-              x,
-
-            y:
-              endY *
-              (
-                i /
-                segments
-              )
-          });
-        }
-
-        bolt = {
-          points:
-            points
-        };
-
-        boltUntil =
-          performance.now() +
-          160;
-      }
-
-
-      function drawBolt(
-        now
-      ) {
-        if (
-          !bolt ||
-          now >
-          boltUntil
-        ) {
-          return;
-        }
-
-        const alpha =
-          Math.max(
-            0,
-            (
-              boltUntil -
-              now
-            )
-            /
-            160
-          );
-
-        ctx.save();
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-          bolt.points[0].x,
-          bolt.points[0].y
-        );
-
-        for (
-          let i = 1;
-          i < bolt.points.length;
-          i++
-        ) {
-          ctx.lineTo(
-            bolt.points[i].x,
-            bolt.points[i].y
-          );
-        }
-
-        ctx.strokeStyle =
-          "rgba(235,245,255," +
-          (
-            alpha *
-            0.24
+            window.innerWidth +
+            220
           )
           +
-          ")";
-
-        ctx.lineWidth =
-          0.9;
-
-        ctx.shadowColor =
-          "rgba(200,225,255,0.25)";
-
-        ctx.shadowBlur =
-          4;
-
-        ctx.stroke();
-
-        ctx.restore();
-      }
-
-
-      function drawAtmosphere(
-        now
-      ) {
-        const width =
-          window.innerWidth;
-
-        const height =
-          window.innerHeight;
-
-        const pulse =
-          0.018 *
-          (
-            1 +
-            Math.sin(
-              now *
-              0.00045
-            )
-          );
-
-        ctx.save();
-
-        ctx.globalCompositeOperation =
-          "screen";
-
-        const topGradient =
-          ctx.createLinearGradient(
-            0,
-            0,
-            0,
-            height *
-            0.52
-          );
-
-        topGradient.addColorStop(
-          0,
-          "rgba(220,230,245," +
-          (
-            0.012 +
-            pulse
-          )
-          +
-          ")"
-        );
-
-        topGradient.addColorStop(
-          0.35,
-          "rgba(220,230,245,0.010)"
-        );
-
-        topGradient.addColorStop(
-          1,
-          "rgba(220,230,245,0)"
-        );
-
-        ctx.fillStyle =
-          topGradient;
-
-        ctx.fillRect(
-          0,
-          0,
-          width,
-          height *
-          0.52
-        );
-
-        ctx.restore();
+          60;
       }
 
 
       function drawRainLayer(
         layer,
-        now,
         dt
       ) {
-        const width =
-          window.innerWidth;
-
         const height =
           window.innerHeight;
-
-        const wind =
-          0.16 +
-          0.035 *
-          Math.sin(
-            now *
-            0.00055
-          );
 
         ctx.save();
 
         ctx.filter =
-          layer.blur > 0
-          ?
           "blur(" +
           layer.blur +
-          "px)"
-          :
-          "none";
+          "px)";
 
         ctx.lineCap =
           "round";
 
         ctx.globalCompositeOperation =
-          "screen";
+          "source-over";
 
         layer.drops.forEach(
           function(drop) {
@@ -1356,101 +1098,69 @@
 
             drop.x -=
               drop.speed *
-              wind *
+              drop.slant *
               dt;
 
             if (
               drop.y >
               height +
-              70
+              80
               ||
               drop.x <
-              -140
+              -180
             ) {
               resetDrop(
-                drop,
-                width
+                drop
               );
             }
 
-            const angleShift =
-              0.018 *
-              Math.sin(
-                now *
-                0.0009 +
-                drop.phase
-              );
-
-            const angle =
-              drop.angle +
-              angleShift +
-              drop.drift;
-
             const dx =
-              -Math.sin(
-                angle
-              )
-              *
-              drop.len;
+              -drop.length *
+              drop.slant;
 
             const dy =
-              Math.cos(
-                angle
-              )
-              *
-              drop.len;
+              drop.length;
 
-            const x2 =
-              drop.x +
-              dx;
-
-            const y2 =
-              drop.y +
-              dy;
-
-            const grad =
+            const gradient =
               ctx.createLinearGradient(
                 drop.x,
                 drop.y,
-                x2,
-                y2
+                drop.x +
+                dx,
+                drop.y +
+                dy
               );
 
-            grad.addColorStop(
+            gradient.addColorStop(
               0,
-              "rgba(225,235,255,0)"
+              "rgba(205,220,236,0)"
             );
 
-            grad.addColorStop(
-              0.28,
-              "rgba(225,235,255," +
+            gradient.addColorStop(
+              0.25,
+              "rgba(205,220,236," +
               (
                 drop.alpha *
-                0.22 *
-                layer.opacity
+                0.52
               )
               +
               ")"
             );
 
-            grad.addColorStop(
+            gradient.addColorStop(
               0.72,
-              "rgba(225,235,255," +
-              (
-                drop.alpha *
-                layer.opacity
-              )
-              +
+              "rgba(220,232,244," +
+              drop.alpha +
               ")"
             );
 
-            grad.addColorStop(
+            gradient.addColorStop(
               1,
-              "rgba(225,235,255,0)"
+              "rgba(225,235,246,0)"
             );
 
             ctx.strokeStyle =
-              grad;
+              gradient;
 
             ctx.lineWidth =
               drop.width;
@@ -1463,13 +1173,203 @@
             );
 
             ctx.lineTo(
-              x2,
-              y2
+              drop.x +
+              dx,
+              drop.y +
+              dy
             );
 
             ctx.stroke();
           }
         );
+
+        ctx.restore();
+      }
+
+
+      function drawStormVeil() {
+        const width =
+          window.innerWidth;
+
+        const height =
+          window.innerHeight;
+
+        ctx.save();
+
+        const topMist =
+          ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            height *
+            0.70
+          );
+
+        topMist.addColorStop(
+          0,
+          "rgba(140,158,176,0.055)"
+        );
+
+        topMist.addColorStop(
+          0.45,
+          "rgba(150,168,186,0.022)"
+        );
+
+        topMist.addColorStop(
+          1,
+          "rgba(160,178,194,0)"
+        );
+
+        ctx.fillStyle =
+          topMist;
+
+        ctx.fillRect(
+          0,
+          0,
+          width,
+          height *
+          0.72
+        );
+
+        ctx.restore();
+      }
+
+
+      function createBolt() {
+        const width =
+          window.innerWidth;
+
+        const height =
+          window.innerHeight;
+
+        let x =
+          width *
+          (
+            0.18 +
+            Math.random() *
+            0.64
+          );
+
+        const targetY =
+          height *
+          (
+            0.23 +
+            Math.random() *
+            0.20
+          );
+
+        const segments =
+          9 +
+          Math.floor(
+            Math.random() *
+            4
+          );
+
+        const points = [
+          {
+            x:
+              x,
+
+            y:
+              -10
+          }
+        ];
+
+        for (
+          let i = 1;
+          i <= segments;
+          i++
+        ) {
+          x +=
+            (
+              Math.random() -
+              0.5
+            )
+            *
+            30;
+
+          points.push({
+            x:
+              x,
+
+            y:
+              targetY *
+              i /
+              segments
+          });
+        }
+
+        boltPoints =
+          points;
+
+        boltUntil =
+          performance.now() +
+          190;
+      }
+
+
+      function drawBolt(
+        now
+      ) {
+        if (
+          !boltPoints
+          ||
+          now >
+          boltUntil
+        ) {
+          return;
+        }
+
+        const fade =
+          Math.max(
+            0,
+            (
+              boltUntil -
+              now
+            )
+            /
+            190
+          );
+
+        ctx.save();
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+          boltPoints[0].x,
+          boltPoints[0].y
+        );
+
+        for (
+          let i = 1;
+          i < boltPoints.length;
+          i++
+        ) {
+          ctx.lineTo(
+            boltPoints[i].x,
+            boltPoints[i].y
+          );
+        }
+
+        ctx.strokeStyle =
+          "rgba(235,245,255," +
+          (
+            fade *
+            0.46
+          )
+          +
+          ")";
+
+        ctx.lineWidth =
+          1.25;
+
+        ctx.shadowColor =
+          "rgba(185,215,255,0.72)";
+
+        ctx.shadowBlur =
+          9;
+
+        ctx.stroke();
 
         ctx.restore();
       }
@@ -1505,32 +1405,24 @@
         lastFrameTime =
           now;
 
-        const width =
-          window.innerWidth;
-
-        const height =
-          window.innerHeight;
-
         ctx.clearRect(
           0,
           0,
-          width,
-          height
+          window.innerWidth,
+          window.innerHeight
         );
 
-        drawAtmosphere(
-          now
-        );
+        drawStormVeil();
 
-        layers.forEach(
-          function(layer) {
-            drawRainLayer(
-              layer,
-              now,
-              dt
-            );
-          }
-        );
+        for (
+          const layer
+          of layers
+        ) {
+          drawRainLayer(
+            layer,
+            dt
+          );
+        }
 
         drawBolt(
           now
@@ -1558,23 +1450,24 @@
         flash.style.background =
           "radial-gradient(circle at " +
           x +
-          "% 6%, " +
-          "rgba(255,255,255,0.42) 0%, " +
-          "rgba(210,230,255,0.15) 14%, " +
-          "rgba(160,195,255,0.04) 32%, " +
+          "% 7%, " +
+          "rgba(255,255,255,0.72) 0%, " +
+          "rgba(205,225,255,0.26) 14%, " +
+          "rgba(175,205,240,0.08) 32%, " +
           "rgba(255,255,255,0) 68%)";
 
         flash.style.display =
           "block";
 
+        // Une partie des flashs montre réellement le trait d'éclair.
         if (
           Math.random() <
-          0.18
+          0.52
         ) {
-          generateBolt();
+          createBolt();
         }
         else {
-          bolt =
+          boltPoints =
             null;
         }
 
@@ -1586,15 +1479,15 @@
             },
             {
               opacity:
-                0.16
+                0.28
             },
             {
               opacity:
-                0.02
+                0.045
             },
             {
               opacity:
-                0.08
+                0.15
             },
             {
               opacity:
@@ -1603,18 +1496,22 @@
           ],
           {
             duration:
-              460,
+              520,
 
             easing:
               "ease-out"
           }
         );
 
-        scheduleLightning();
+        scheduleLightning(
+          false
+        );
       }
 
 
-      function scheduleLightning() {
+      function scheduleLightning(
+        first
+      ) {
         if (
           lightningTimer
         ) {
@@ -1632,9 +1529,15 @@
         lightningTimer =
           window.setTimeout(
             flashLightning,
-            8500 +
-            Math.random() *
-            8500
+            first
+            ?
+            1800
+            :
+            (
+              4800 +
+              Math.random() *
+              4200
+            )
           );
       }
 
@@ -1657,6 +1560,12 @@
         canvas.style.display =
           "block";
 
+        canvas.style.visibility =
+          "visible";
+
+        canvas.style.opacity =
+          "1";
+
         flash.style.display =
           "block";
 
@@ -1665,7 +1574,10 @@
             drawRain
           );
 
-        scheduleLightning();
+        // Premier éclair rapidement après l'entrée dans 2050.
+        scheduleLightning(
+          true
+        );
       }
 
 
@@ -1701,6 +1613,9 @@
             lightningTimer
           );
         }
+
+        boltPoints =
+          null;
       }
 
 
@@ -3842,6 +3757,14 @@
         // ======================================================
         // ANTI-COLLISION VISUEL
         // ======================================================
+        //
+        // Deux cas distincts :
+        // 1. suivi sur le même axe -> le véhicule arrière adapte
+        //    sa vitesse sans s'arrêter inutilement ;
+        // 2. croisement -> priorité classique BUS/TRUCK puis ID.
+        //
+        // Cela évite à la fois les chevauchements et les bouchons.
+        // ======================================================
 
         function headingUnitVector(
           headingDegrees
@@ -3878,46 +3801,41 @@
         }
 
 
-        function trailingVehicle(
+        function currentVehicleHeading(
+          vehicle
+        ) {
+          return smoothHeading(
+            vehicle.route,
+            vehicle.currentDistance,
+            view.spatialReference
+          );
+        }
+
+
+        function followingRelation(
           vehicleA,
           vehicleB
         ) {
           const headingA =
-            smoothHeading(
-              vehicleA.route,
-              vehicleA.currentDistance,
-              view.spatialReference
+            currentVehicleHeading(
+              vehicleA
             );
 
           const headingB =
-            smoothHeading(
-              vehicleB.route,
-              vehicleB.currentDistance,
-              view.spatialReference
+            currentVehicleHeading(
+              vehicleB
             );
 
-          // Uniquement pour deux véhicules allant globalement
-          // dans le même sens. Les conflits en intersection restent
-          // gérés par la logique de priorité plus bas.
+          // Pas du suivi si les directions divergent franchement.
           if (
             headingDifference(
               headingA,
               headingB
             ) >
-            38
+            30
           ) {
             return null;
           }
-
-          const forwardA =
-            headingUnitVector(
-              headingA
-            );
-
-          const forwardB =
-            headingUnitVector(
-              headingB
-            );
 
           const dxAB =
             vehicleB.currentPosition.x -
@@ -3927,116 +3845,147 @@
             vehicleB.currentPosition.y -
             vehicleA.currentPosition.y;
 
-          const dxBA =
-            -dxAB;
+          const distance =
+            Math.hypot(
+              dxAB,
+              dyAB
+            );
 
-          const dyBA =
-            -dyAB;
-
-          // Lambert-93 : unités métriques.
-          // Produit scalaire > 0 => l'autre véhicule est devant.
-          const bAheadOfA =
-            dxAB *
-            forwardA.x +
-            dyAB *
-            forwardA.y;
-
-          const aAheadOfB =
-            dxBA *
-            forwardB.x +
-            dyBA *
-            forwardB.y;
-
+          // Au-delà, ce n'est pas encore un problème de suivi.
           if (
-            bAheadOfA >
-            0.5
-            &&
-            aAheadOfB <
-            -0.5
+            distance >
+            34
           ) {
-            return vehicleA;
+            return null;
           }
 
-          if (
-            aAheadOfB >
-            0.5
-            &&
-            bAheadOfA <
-            -0.5
+          function relationFor(
+            follower,
+            leader,
+            dx,
+            dy,
+            heading
           ) {
-            return vehicleB;
+            const forward =
+              headingUnitVector(
+                heading
+              );
+
+            const longitudinal =
+              dx *
+              forward.x +
+              dy *
+              forward.y;
+
+            const lateral =
+              Math.abs(
+                dx *
+                forward.y -
+                dy *
+                forward.x
+              );
+
+            // Couloir étroit : évite que deux routes parallèles
+            // proches se bloquent mutuellement.
+            if (
+              longitudinal >
+              0.75
+              &&
+              lateral <
+              4.2
+            ) {
+              return {
+                follower:
+                  follower,
+
+                leader:
+                  leader,
+
+                gap:
+                  distance,
+
+                longitudinal:
+                  longitudinal,
+
+                lateral:
+                  lateral
+              };
+            }
+
+            return null;
           }
 
-          return null;
+          const aFollowsB =
+            relationFor(
+              vehicleA,
+              vehicleB,
+              dxAB,
+              dyAB,
+              headingA
+            );
+
+          if (
+            aFollowsB
+          ) {
+            return aFollowsB;
+          }
+
+          return relationFor(
+            vehicleB,
+            vehicleA,
+            -dxAB,
+            -dyAB,
+            headingB
+          );
         }
 
 
-        function followingSafetyDistance(
+        function followingBaseGap(
           vehicle
         ) {
           if (
             vehicle.type ===
             "TRUCK"
           ) {
-            return 24.0;
+            return 11.5;
           }
 
           if (
             vehicle.type ===
             "BUS"
           ) {
-            return 21.0;
+            return 10.0;
           }
 
-          return 10.0;
+          return 6.5;
         }
 
 
-        function collisionThreshold(
-          vehicleA,
-          vehicleB
+        function intersectionRadius(
+          vehicle
         ) {
-          const trailing =
-            trailingVehicle(
-              vehicleA,
-              vehicleB
-            );
-
           if (
-            trailing
+            vehicle.type ===
+            "TRUCK"
           ) {
-            return Math.max(
-              safetyRadius(
-                vehicleA.type
-              ),
-              safetyRadius(
-                vehicleB.type
-              ),
-              followingSafetyDistance(
-                trailing
-              )
-            );
+            return 9.0;
           }
 
-          return Math.max(
-            safetyRadius(
-              vehicleA.type
-            ),
-            safetyRadius(
-              vehicleB.type
-            )
-          );
+          if (
+            vehicle.type ===
+            "BUS"
+          ) {
+            return 8.0;
+          }
+
+          return 5.5;
         }
 
 
         function vehiclePriorityRank(
           vehicle
         ) {
-          // Priorité de circulation aux intersections :
-          // 0 = BUS / TRUCK
-          // 1 = CAR
-          // IMPORTANT : cette priorité ne s'applique pas
-          // lorsqu'un véhicule en suit un autre.
+          // Priorité uniquement aux croisements.
           if (
             vehicle.type ===
             "BUS"
@@ -4051,26 +4000,10 @@
         }
 
 
-        function chooseBlockedVehicle(
+        function chooseIntersectionLoser(
           vehicleA,
           vehicleB
         ) {
-          // Règle prioritaire : en circulation dans le même sens,
-          // c'est TOUJOURS le véhicule de derrière qui ralentit.
-          // Un bus ou un camion ne peut donc plus traverser une voiture
-          // simplement parce qu'il a une priorité plus élevée.
-          const trailing =
-            trailingVehicle(
-              vehicleA,
-              vehicleB
-            );
-
-          if (
-            trailing
-          ) {
-            return trailing;
-          }
-
           const rankA =
             vehiclePriorityRank(
               vehicleA
@@ -4081,7 +4014,6 @@
               vehicleB
             );
 
-          // Aux croisements uniquement, BUS / TRUCK gardent la priorité.
           if (
             rankA <
             rankB
@@ -4096,7 +4028,6 @@
             return vehicleA;
           }
 
-          // À priorité égale, l'ID le plus faible garde la priorité.
           return vehicleA.priority <=
             vehicleB.priority
             ?
@@ -4109,25 +4040,62 @@
         const roadVehicles =
           vehicles.filter(
             function(vehicle) {
-              return vehicle.type !== "BOAT";
+              return vehicle.type !==
+                "BOAT";
             }
           );
 
         let blockedVehicles =
           new Set();
 
+        let followingSpeedTargets =
+          new Map();
+
         let lastCollisionCheck =
           0;
+
+
+        function setFollowingTarget(
+          map,
+          vehicle,
+          targetSpeed
+        ) {
+          const current =
+            map.get(
+              vehicle.key
+            );
+
+          const bounded =
+            Math.max(
+              0,
+              Math.min(
+                vehicle.speedMs,
+                targetSpeed
+              )
+            );
+
+          if (
+            current == null
+            ||
+            bounded <
+            current
+          ) {
+            map.set(
+              vehicle.key,
+              bounded
+            );
+          }
+        }
+
 
         function updateCollisionState(
           currentTime
         ) {
-          // ~12,5 Hz : suffisant pour l'anticipation, tout en gardant
-          // une animation fluide avec le trafic doublé.
+          // 10 Hz suffit, et évite de charger le rendu 3D.
           if (
             currentTime -
             lastCollisionCheck <
-            80
+            100
           ) {
             return;
           }
@@ -4138,17 +4106,16 @@
           const newBlocked =
             new Set();
 
-          // On regarde plus loin devant pour éviter qu'un véhicule
-          // rapide (notamment BUS / TRUCK) rattrape une voiture.
-          const sampleTimes = [
+          const newFollowingTargets =
+            new Map();
+
+          // Croisements : anticipation courte pour éviter les faux arrêts.
+          const intersectionSamples = [
             0.35,
             0.70,
             1.05,
             1.40,
-            1.80,
-            2.20,
-            2.60,
-            3.00
+            1.80
           ];
 
           for (
@@ -4167,12 +4134,6 @@
               const vehicleB =
                 roadVehicles[j];
 
-              const threshold =
-                collisionThreshold(
-                  vehicleA,
-                  vehicleB
-                );
-
               const distanceNow =
                 distanceMeters(
                   vehicleA.currentPosition.x,
@@ -4182,12 +4143,121 @@
                   view.spatialReference
                 );
 
+              const following =
+                followingRelation(
+                  vehicleA,
+                  vehicleB
+                );
+
+              if (
+                following
+              ) {
+                const follower =
+                  following.follower;
+
+                const leader =
+                  following.leader;
+
+                const baseGap =
+                  followingBaseGap(
+                    follower
+                  );
+
+                const closingSpeed =
+                  Math.max(
+                    0,
+                    follower.currentSpeedMs -
+                    leader.currentSpeedMs
+                  );
+
+                const desiredGap =
+                  baseGap +
+                  closingSpeed *
+                  1.15;
+
+                const projectedGap =
+                  following.gap +
+                  (
+                    leader.currentSpeedMs -
+                    follower.currentSpeedMs
+                  )
+                  *
+                  1.6;
+
+                if (
+                  following.gap <
+                  desiredGap *
+                  1.18
+                  ||
+                  projectedGap <
+                  desiredGap
+                ) {
+                  let targetSpeed;
+
+                  if (
+                    following.gap <
+                    baseGap *
+                    0.56
+                  ) {
+                    // Seulement en cas de proximité réelle :
+                    // freinage fort pour empêcher tout chevauchement.
+                    targetSpeed =
+                      Math.max(
+                        0,
+                        leader.currentSpeedMs *
+                        0.45
+                      );
+                  }
+                  else {
+                    // Suivi fluide : on se cale sur la vitesse du véhicule
+                    // devant au lieu de faire stop / redémarrage.
+                    targetSpeed =
+                      Math.min(
+                        follower.speedMs,
+                        Math.max(
+                          0.4,
+                          leader.currentSpeedMs *
+                          0.96
+                        )
+                      );
+                  }
+
+                  setFollowingTarget(
+                    newFollowingTargets,
+                    follower,
+                    targetSpeed
+                  );
+                }
+
+                // Un couple en suivi ne doit pas être traité comme
+                // un conflit d'intersection.
+                continue;
+              }
+
+              // Les véhicules éloignés ne nécessitent aucun calcul futur.
+              if (
+                distanceNow >
+                38
+              ) {
+                continue;
+              }
+
+              const threshold =
+                Math.max(
+                  intersectionRadius(
+                    vehicleA
+                  ),
+                  intersectionRadius(
+                    vehicleB
+                  )
+                );
+
               let minFutureDistance =
                 distanceNow;
 
               for (
                 const t
-                of sampleTimes
+                of intersectionSamples
               ) {
                 const predictedDistanceA =
                   (
@@ -4223,7 +4293,7 @@
                     predictedDistanceB
                   );
 
-                const sampleDistance =
+                const futureDistance =
                   distanceMeters(
                     predictedA.x,
                     predictedA.y,
@@ -4235,25 +4305,16 @@
                 minFutureDistance =
                   Math.min(
                     minFutureDistance,
-                    sampleDistance
+                    futureDistance
                   );
               }
 
-              const conflictAhead =
-                minFutureDistance <
-                threshold;
-
-              const alreadyTooClose =
-                distanceNow <
-                threshold *
-                0.90;
-
               if (
-                conflictAhead ||
-                alreadyTooClose
+                minFutureDistance <
+                threshold
               ) {
                 const loser =
-                  chooseBlockedVehicle(
+                  chooseIntersectionLoser(
                     vehicleA,
                     vehicleB
                   );
@@ -4267,7 +4328,11 @@
 
           blockedVehicles =
             newBlocked;
+
+          followingSpeedTargets =
+            newFollowingTargets;
         }
+
 
         // ======================================================
         // ANIMATION
@@ -4336,9 +4401,15 @@
               of vehicles
             ) {
               const isBlocked =
-                vehicle.type !== "BOAT"
+                vehicle.type !==
+                "BOAT"
                 &&
                 blockedVehicles.has(
+                  vehicle.key
+                );
+
+              const followingTarget =
+                followingSpeedTargets.get(
                   vehicle.key
                 );
 
@@ -4347,29 +4418,43 @@
                 ?
                 0
                 :
-                vehicle.speedMs;
+                (
+                  Number.isFinite(
+                    followingTarget
+                  )
+                  ?
+                  followingTarget
+                  :
+                  vehicle.speedMs
+                );
 
-              // Freinage suffisamment franc pour empêcher le rattrapage
-              // visuel des véhicules devant, tout en gardant une reprise douce.
+              // Freinage progressif pour le suivi, plus franc uniquement
+              // lorsqu'un arrêt d'intersection est réellement nécessaire.
               const rate =
                 vehicle.targetSpeedMs <
                 vehicle.currentSpeedMs
                 ?
                 (
-                  vehicle.type === "TRUCK"
+                  isBlocked
                   ?
-                  14.0
+                  10.0
                   :
                   (
-                    vehicle.type === "BUS"
+                    vehicle.type === "TRUCK"
                     ?
-                    13.0
+                    7.5
                     :
-                    11.0
+                    (
+                      vehicle.type === "BUS"
+                      ?
+                      7.0
+                      :
+                      6.4
+                    )
                   )
                 )
                 :
-                2.8;
+                3.4;
 
               vehicle.currentSpeedMs =
                 moveToward(
