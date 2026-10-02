@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261002-WEATHER-BOATFIX";
+      "SIG2026-20261002-FOLLOWING-FIX";
 
     console.log(
       "BUILD :",
@@ -3810,10 +3810,181 @@
         // ANTI-COLLISION VISUEL
         // ======================================================
 
+        function headingUnitVector(
+          headingDegrees
+        ) {
+          const radians =
+            headingDegrees *
+            Math.PI /
+            180;
+
+          return {
+            x:
+              Math.sin(
+                radians
+              ),
+
+            y:
+              Math.cos(
+                radians
+              )
+          };
+        }
+
+
+        function headingDifference(
+          headingA,
+          headingB
+        ) {
+          return Math.abs(
+            shortestAngleDelta(
+              headingA,
+              headingB
+            )
+          );
+        }
+
+
+        function trailingVehicle(
+          vehicleA,
+          vehicleB
+        ) {
+          const headingA =
+            smoothHeading(
+              vehicleA.route,
+              vehicleA.currentDistance,
+              view.spatialReference
+            );
+
+          const headingB =
+            smoothHeading(
+              vehicleB.route,
+              vehicleB.currentDistance,
+              view.spatialReference
+            );
+
+          // Uniquement pour deux véhicules allant globalement
+          // dans le même sens. Les conflits en intersection restent
+          // gérés par la logique de priorité plus bas.
+          if (
+            headingDifference(
+              headingA,
+              headingB
+            ) >
+            38
+          ) {
+            return null;
+          }
+
+          const forwardA =
+            headingUnitVector(
+              headingA
+            );
+
+          const forwardB =
+            headingUnitVector(
+              headingB
+            );
+
+          const dxAB =
+            vehicleB.currentPosition.x -
+            vehicleA.currentPosition.x;
+
+          const dyAB =
+            vehicleB.currentPosition.y -
+            vehicleA.currentPosition.y;
+
+          const dxBA =
+            -dxAB;
+
+          const dyBA =
+            -dyAB;
+
+          // Lambert-93 : unités métriques.
+          // Produit scalaire > 0 => l'autre véhicule est devant.
+          const bAheadOfA =
+            dxAB *
+            forwardA.x +
+            dyAB *
+            forwardA.y;
+
+          const aAheadOfB =
+            dxBA *
+            forwardB.x +
+            dyBA *
+            forwardB.y;
+
+          if (
+            bAheadOfA >
+            0.5
+            &&
+            aAheadOfB <
+            -0.5
+          ) {
+            return vehicleA;
+          }
+
+          if (
+            aAheadOfB >
+            0.5
+            &&
+            bAheadOfA <
+            -0.5
+          ) {
+            return vehicleB;
+          }
+
+          return null;
+        }
+
+
+        function followingSafetyDistance(
+          vehicle
+        ) {
+          if (
+            vehicle.type ===
+            "TRUCK"
+          ) {
+            return 24.0;
+          }
+
+          if (
+            vehicle.type ===
+            "BUS"
+          ) {
+            return 21.0;
+          }
+
+          return 10.0;
+        }
+
+
         function collisionThreshold(
           vehicleA,
           vehicleB
         ) {
+          const trailing =
+            trailingVehicle(
+              vehicleA,
+              vehicleB
+            );
+
+          if (
+            trailing
+          ) {
+            return Math.max(
+              safetyRadius(
+                vehicleA.type
+              ),
+              safetyRadius(
+                vehicleB.type
+              ),
+              followingSafetyDistance(
+                trailing
+              )
+            );
+          }
+
           return Math.max(
             safetyRadius(
               vehicleA.type
@@ -3824,17 +3995,21 @@
           );
         }
 
+
         function vehiclePriorityRank(
           vehicle
         ) {
-          // Priorité de circulation :
+          // Priorité de circulation aux intersections :
           // 0 = BUS / TRUCK
           // 1 = CAR
-          // Les bateaux sont exclus de l'anti-collision routier.
+          // IMPORTANT : cette priorité ne s'applique pas
+          // lorsqu'un véhicule en suit un autre.
           if (
-            vehicle.type === "BUS"
+            vehicle.type ===
+            "BUS"
             ||
-            vehicle.type === "TRUCK"
+            vehicle.type ===
+            "TRUCK"
           ) {
             return 0;
           }
@@ -3847,6 +4022,22 @@
           vehicleA,
           vehicleB
         ) {
+          // Règle prioritaire : en circulation dans le même sens,
+          // c'est TOUJOURS le véhicule de derrière qui ralentit.
+          // Un bus ou un camion ne peut donc plus traverser une voiture
+          // simplement parce qu'il a une priorité plus élevée.
+          const trailing =
+            trailingVehicle(
+              vehicleA,
+              vehicleB
+            );
+
+          if (
+            trailing
+          ) {
+            return trailing;
+          }
+
           const rankA =
             vehiclePriorityRank(
               vehicleA
@@ -3857,7 +4048,7 @@
               vehicleB
             );
 
-          // Le rang le plus faible passe en premier.
+          // Aux croisements uniquement, BUS / TRUCK gardent la priorité.
           if (
             rankA <
             rankB
@@ -3880,6 +4071,7 @@
             :
             vehicleA;
         }
+
 
         const roadVehicles =
           vehicles.filter(
@@ -3913,16 +4105,17 @@
           const newBlocked =
             new Set();
 
-          // On échantillonne les 1,8 prochaines secondes.
-          // Cela détecte aussi deux véhicules qui se croisent
-          // entre "maintenant" et la position finale de prédiction.
+          // On regarde plus loin devant pour éviter qu'un véhicule
+          // rapide (notamment BUS / TRUCK) rattrape une voiture.
           const sampleTimes = [
-            0.30,
-            0.60,
-            0.90,
-            1.20,
-            1.50,
-            1.80
+            0.35,
+            0.70,
+            1.05,
+            1.40,
+            1.80,
+            2.20,
+            2.60,
+            3.00
           ];
 
           for (
@@ -4123,13 +4316,25 @@
                 :
                 vehicle.speedMs;
 
-              // Freinage plus franc que l'accélération :
-              // pas d'arrêt instantané, donc mouvement plus naturel.
+              // Freinage suffisamment franc pour empêcher le rattrapage
+              // visuel des véhicules devant, tout en gardant une reprise douce.
               const rate =
                 vehicle.targetSpeedMs <
                 vehicle.currentSpeedMs
                 ?
-                10.0
+                (
+                  vehicle.type === "TRUCK"
+                  ?
+                  14.0
+                  :
+                  (
+                    vehicle.type === "BUS"
+                    ?
+                    13.0
+                    :
+                    11.0
+                  )
+                )
                 :
                 2.8;
 
