@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261002-1805";
+      "SIG2026-20261002-BOAT3";
 
     console.log(
       "BUILD :",
@@ -33,7 +33,7 @@
     // le bateau au-dessus du mesh / fond de rivière.
     // À ajuster si besoin après ton prochain test.
     const BOAT_VERTICAL_OFFSET =
-      6.0;
+      4.7;
 
     const HEADING_LOOK_AHEAD_METERS =
       4;
@@ -2921,7 +2921,7 @@
                   0,
 
                 z:
-                  -0.50
+                  -0.12
               };
 
               if (
@@ -3220,6 +3220,183 @@
           }
         }
 
+        // ======================================================
+        // BATEAUX x3
+        // ======================================================
+        //
+        // À partir de la ligne BOAT existante :
+        // - bateau A : position d'origine
+        // - bateau B : + 1/3 du parcours
+        // - bateau C : + 2/3 du parcours
+        //
+        // Aucun nouvel attribut ni nouvelle ligne n'est nécessaire.
+        // ======================================================
+
+        const originalBoats =
+          vehicles.filter(
+            function(vehicle) {
+              return vehicle.type === "BOAT";
+            }
+          );
+
+        for (
+          const sourceBoat
+          of originalBoats
+        ) {
+          const fractions = [
+            {
+              suffix:
+                "_B",
+
+              fraction:
+                1 / 3
+            },
+            {
+              suffix:
+                "_C",
+
+              fraction:
+                2 / 3
+            }
+          ];
+
+          for (
+            const item
+            of fractions
+          ) {
+            try {
+              const boatDistance =
+                (
+                  sourceBoat.currentDistance
+                  +
+                  sourceBoat.route.totalLength
+                  *
+                  item.fraction
+                )
+                %
+                sourceBoat.route.totalLength;
+
+              const boatPosition =
+                pointAtDistance(
+                  sourceBoat.route,
+                  boatDistance
+                );
+
+              const boatHeading =
+                smoothHeading(
+                  sourceBoat.route,
+                  boatDistance,
+                  view.spatialReference
+                );
+
+              const boatSymbol =
+                sourceBoat.graphic.symbol
+                  .clone();
+
+              const boatSymbolLayer =
+                boatSymbol.symbolLayers
+                  .getItemAt(0);
+
+              boatSymbolLayer.heading =
+                boatHeading;
+
+              const boatGraphic =
+                new Graphic({
+                  geometry:
+                    new Point({
+                      x:
+                        boatPosition.x,
+
+                      y:
+                        boatPosition.y,
+
+                      spatialReference:
+                        view.spatialReference
+                    }),
+
+                  symbol:
+                    boatSymbol,
+
+                  attributes: {
+                    ID_VEH:
+                      sourceBoat.id +
+                      item.suffix,
+
+                    TYPE_V:
+                      "BOAT",
+
+                    MODELE:
+                      sourceBoat.symbolName,
+
+                    VITESSE:
+                      sourceBoat.speedKmh
+                  }
+                });
+
+              boatLayer.add(
+                boatGraphic
+              );
+
+              vehicles.push({
+                key:
+                  sourceBoat.id +
+                  item.suffix,
+
+                id:
+                  sourceBoat.id,
+
+                type:
+                  "BOAT",
+
+                symbolName:
+                  sourceBoat.symbolName,
+
+                speedKmh:
+                  sourceBoat.speedKmh,
+
+                speedMs:
+                  sourceBoat.speedMs,
+
+                route:
+                  sourceBoat.route,
+
+                currentDistance:
+                  boatDistance,
+
+                currentPosition:
+                  boatPosition,
+
+                graphic:
+                  boatGraphic,
+
+                priority:
+                  sourceBoat.priority,
+
+                currentSpeedMs:
+                  sourceBoat.speedMs,
+
+                targetSpeedMs:
+                  sourceBoat.speedMs,
+
+                lastHeadingUpdate:
+                  0,
+
+                lastRenderedHeading:
+                  boatHeading
+              });
+            }
+            catch (boatDuplicateError) {
+              console.warn(
+                "Duplication bateau ignorée :",
+                sourceBoat.id,
+                item.suffix,
+                boatDuplicateError
+              );
+            }
+          }
+        }
+
+
         console.log(
           "Trafic x2 activé :",
           vehicles.filter(
@@ -3233,7 +3410,7 @@
               return vehicle.type === "BOAT";
             }
           ).length,
-          "bateau(x)."
+          "bateaux."
         );
 
 
