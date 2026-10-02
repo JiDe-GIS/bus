@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Saintes - Mobilité 3D</title>
 
   <!-- Connexions préparées dès l'ouverture pour réduire la latence initiale. -->
@@ -124,43 +127,15 @@
     }
 
     #starCanvas {
-      z-index: 88;
-      display: none;
-      opacity: 0.72;
-      mix-blend-mode: screen;
-
-      /* Les étoiles de renfort restent uniquement dans la bande de ciel. */
-      clip-path: polygon(
-        0 0,
-        100% 0,
-        100% 18%,
-        0 24%
-      );
-
-      -webkit-mask-image:
-        linear-gradient(
-          to bottom,
-          rgba(0, 0, 0, 0.98) 0%,
-          rgba(0, 0, 0, 0.92) 8%,
-          rgba(0, 0, 0, 0.55) 15%,
-          rgba(0, 0, 0, 0.12) 20%,
-          rgba(0, 0, 0, 0.00) 24%
-        );
-
-      mask-image:
-        linear-gradient(
-          to bottom,
-          rgba(0, 0, 0, 0.98) 0%,
-          rgba(0, 0, 0, 0.92) 8%,
-          rgba(0, 0, 0, 0.55) 15%,
-          rgba(0, 0, 0, 0.12) 20%,
-          rgba(0, 0, 0, 0.00) 24%
-        );
+      display: none !important;
     }
 
     #weatherCanvas {
       z-index: 90;
       display: none;
+      opacity: 0.90;
+      mix-blend-mode: screen;
+      filter: blur(0.15px);
     }
 
     #lightningFlash {
@@ -384,6 +359,14 @@
     // ==========================================================
     // CONFIGURATION
     // ==========================================================
+
+    const BUILD_ID =
+      "SIG2026-20261002-1805";
+
+    console.log(
+      "BUILD :",
+      BUILD_ID
+    );
 
     const PORTAL_URL =
       "https://saintongeromane.maps.arcgis.com";
@@ -2112,186 +2095,6 @@
           "nightTint"
         );
 
-      const starCanvas =
-        document.getElementById(
-          "starCanvas"
-        );
-
-      const starCtx =
-        starCanvas.getContext(
-          "2d"
-        );
-
-      let stars =
-        [];
-
-      let starAnimation =
-        null;
-
-      let nightActive =
-        false;
-
-
-      function resizeStars() {
-        const dpr =
-          Math.min(
-            window.devicePixelRatio || 1,
-            2
-          );
-
-        starCanvas.width =
-          Math.max(
-            1,
-            Math.floor(
-              window.innerWidth *
-              dpr
-            )
-          );
-
-        starCanvas.height =
-          Math.max(
-            1,
-            Math.floor(
-              window.innerHeight *
-              dpr
-            )
-          );
-
-        starCanvas.style.width =
-          window.innerWidth +
-          "px";
-
-        starCanvas.style.height =
-          window.innerHeight +
-          "px";
-
-        starCtx.setTransform(
-          dpr,
-          0,
-          0,
-          dpr,
-          0,
-          0
-        );
-
-        stars =
-          Array.from(
-            {
-              length:
-                Math.max(
-                  55,
-                  Math.round(
-                    window.innerWidth /
-                    24
-                  )
-                )
-            },
-            function() {
-              return {
-                x:
-                  Math.random() *
-                  window.innerWidth,
-
-                y:
-                  Math.random() *
-                  (
-                    window.innerHeight *
-                    0.16
-                  ),
-
-                r:
-                  0.45 +
-                  Math.random() *
-                  0.95,
-
-                phase:
-                  Math.random() *
-                  Math.PI *
-                  2,
-
-                speed:
-                  0.0008 +
-                  Math.random() *
-                  0.0010,
-
-                alpha:
-                  0.20 +
-                  Math.random() *
-                  0.40
-              };
-            }
-          );
-      }
-
-
-      function drawStars(
-        now
-      ) {
-        if (
-          !nightActive
-        ) {
-          return;
-        }
-
-        starCtx.clearRect(
-          0,
-          0,
-          window.innerWidth,
-          window.innerHeight
-        );
-
-        stars.forEach(
-          function(star) {
-            const twinkle =
-              0.72 +
-              0.28 *
-              Math.sin(
-                now *
-                star.speed +
-                star.phase
-              );
-
-            const alpha =
-              star.alpha *
-              twinkle;
-
-            starCtx.beginPath();
-
-            starCtx.arc(
-              star.x,
-              star.y,
-              star.r,
-              0,
-              Math.PI *
-              2
-            );
-
-            starCtx.fillStyle =
-              "rgba(235,244,255," +
-              alpha +
-              ")";
-
-            starCtx.shadowColor =
-              "rgba(220,235,255,0.55)";
-
-            starCtx.shadowBlur =
-              star.r >
-              1
-              ?
-              3
-              :
-              1.5;
-
-            starCtx.fill();
-          }
-        );
-
-        starAnimation =
-          requestAnimationFrame(
-            drawStars
-          );
-      }
-
 
       function setSun(
         enabled
@@ -2308,72 +2111,13 @@
       function setNight(
         enabled
       ) {
-        const next =
-          Boolean(
-            enabled
-          );
-
-        if (
-          next ===
-          nightActive
-        ) {
-          return;
-        }
-
-        nightActive =
-          next;
-
         night.classList.toggle(
           "active",
-          next
+          Boolean(
+            enabled
+          )
         );
-
-        starCanvas.style.display =
-          next
-          ?
-          "block"
-          :
-          "none";
-
-        if (
-          next
-        ) {
-          resizeStars();
-
-          starAnimation =
-            requestAnimationFrame(
-              drawStars
-            );
-        }
-        else {
-          if (
-            starAnimation
-          ) {
-            cancelAnimationFrame(
-              starAnimation
-            );
-          }
-
-          starCtx.clearRect(
-            0,
-            0,
-            window.innerWidth,
-            window.innerHeight
-          );
-        }
       }
-
-
-      window.addEventListener(
-        "resize",
-        function() {
-          if (
-            nightActive
-          ) {
-            resizeStars();
-          }
-        }
-      );
 
 
       return {
@@ -2535,9 +2279,31 @@
           nightActive
         );
 
-        // Étoiles natives Esri + overlay étoilé discret.
+        // Étoiles natives Esri uniquement : elles sont réellement
+        // derrière le mesh et ne peuvent plus recouvrir les bâtiments.
         view.environment.starsEnabled =
           nightActive;
+
+        if (
+          nightActive
+        ) {
+          // En retirant l'atmosphère uniquement sur les deux dernières
+          // slides, les étoiles natives ressortent sur le fond du ciel.
+          view.environment.atmosphereEnabled =
+            false;
+
+          view.environment.background = {
+            type:
+              "color",
+
+            color: [
+              5,
+              11,
+              28,
+              1
+            ]
+          };
+        }
 
         console.log(
           "Effets slide :",
