@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261002-FOLLOWING-FIX";
+      "SIG2026-20261002-SLIDER-RESTORE";
 
     console.log(
       "BUILD :",
@@ -2478,6 +2478,15 @@
       controls.style.display =
         "flex";
 
+      controls.style.visibility =
+        "visible";
+
+      controls.style.opacity =
+        "1";
+
+      controls.style.pointerEvents =
+        "auto";
+
       console.log(
         "Diapositives disponibles :",
         slideEntries.length
@@ -2505,6 +2514,30 @@
           }
         )
       );
+
+      // Garde-fou : les flèches de navigation doivent rester
+      // disponibles quelle que soit la slide ou les overlays visuels.
+      window.setInterval(
+        function() {
+          if (
+            controls
+          ) {
+            controls.style.display =
+              "flex";
+
+            controls.style.visibility =
+              "visible";
+
+            controls.style.opacity =
+              "1";
+
+            controls.style.pointerEvents =
+              "auto";
+          }
+        },
+        1000
+      );
+
 
       async function warmSlideLayers() {
         try {
