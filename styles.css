@@ -1,0 +1,290 @@
+html,
+    body,
+    #viewDiv {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: "Avenir Next", Avenir, sans-serif;
+    }
+
+    button,
+    select,
+    input {
+      font-family: "Avenir Next", Avenir, sans-serif;
+    }
+
+    /* Très léger renforcement du rendu 3D uniquement.
+       Le but est de faire ressortir le mesh sans l'assombrir. */
+    #viewDiv canvas {
+      filter:
+        contrast(1.05)
+        saturate(1.07);
+    }
+
+    #sunRays,
+    #nightTint,
+    #starCanvas,
+    #weatherCanvas,
+    #lightningFlash {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #sunRays {
+      z-index: 86;
+      display: none;
+      opacity: 0;
+      overflow: hidden;
+      mix-blend-mode: screen;
+      background:
+        radial-gradient(
+          circle at 11% 4%,
+          rgba(255, 252, 220, 0.72) 0%,
+          rgba(255, 246, 188, 0.32) 17%,
+          rgba(255, 246, 188, 0.00) 44%
+        ),
+        conic-gradient(
+          from 111deg at 8% -2%,
+          transparent 0deg,
+          rgba(255, 248, 210, 0.00) 5deg,
+          rgba(255, 248, 210, 0.30) 11deg,
+          rgba(255, 248, 210, 0.05) 19deg,
+          transparent 25deg,
+          rgba(255, 248, 210, 0.24) 32deg,
+          rgba(255, 248, 210, 0.02) 41deg,
+          transparent 49deg,
+          rgba(255, 248, 210, 0.18) 56deg,
+          transparent 67deg
+        );
+      filter: blur(3.5px);
+      animation:
+        sunRaysPulse
+        6.5s
+        ease-in-out
+        infinite
+        alternate;
+    }
+
+    #sunRays.active {
+      display: block;
+      opacity: 0.96;
+    }
+
+    @keyframes sunRaysPulse {
+      from {
+        opacity: 0.76;
+        transform: scale(1.00) translate3d(0, 0, 0);
+      }
+
+      to {
+        opacity: 0.98;
+        transform: scale(1.045) translate3d(10px, 5px, 0);
+      }
+    }
+
+    #nightTint {
+      z-index: 87;
+      display: none;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(3, 9, 28, 0.32) 0%,
+          rgba(5, 12, 34, 0.20) 45%,
+          rgba(3, 8, 24, 0.13) 100%
+        );
+      mix-blend-mode: multiply;
+    }
+
+    #nightTint.active {
+      display: block;
+    }
+
+    #starCanvas {
+      display: none !important;
+    }
+
+    #weatherCanvas {
+      z-index: 90;
+      display: none;
+      opacity: 0.90;
+      mix-blend-mode: screen;
+      filter: blur(0.15px);
+    }
+
+    #lightningFlash {
+      z-index: 91;
+      display: none;
+      opacity: 0;
+      mix-blend-mode: screen;
+      background:
+        radial-gradient(
+          circle at 52% 5%,
+          rgba(255, 255, 255, 0.98) 0%,
+          rgba(215, 232, 255, 0.62) 13%,
+          rgba(175, 205, 255, 0.20) 32%,
+          rgba(255, 255, 255, 0) 64%
+        );
+    }
+
+    /* Aucun cartouche "Mobilité 3D / 13 véhicules". */
+
+    #slideControls {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      z-index: 110;
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(3px);
+    }
+
+    #slideControls button {
+      width: 48px;
+      height: 48px;
+      border: 0;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #1f2933;
+      font-family: "Avenir Next", Avenir, sans-serif;
+      font-size: 30px;
+      line-height: 48px;
+      font-weight: 400;
+      cursor: pointer;
+      padding: 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+    }
+
+    #slideControls button:hover {
+      background: #f2f2f2;
+    }
+
+    #slideControls button:active {
+      transform: scale(0.96);
+    }
+
+    #slidePresentation {
+      position: absolute;
+      z-index: 105;
+      display: none;
+      pointer-events: none;
+      box-sizing: border-box;
+      max-width: min(780px, calc(100vw - 64px));
+      padding: 18px 24px;
+      border-radius: 10px;
+      background: rgba(20, 20, 20, 0.42);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(2px);
+      color: #ffffff;
+      text-align: center;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+      font-family: "Avenir Next", Avenir, Arial, sans-serif;
+    }
+
+    #slidePresentation.caption {
+      display: block;
+      top: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    #slidePresentation.cover {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      /* Le mode Cover de Scene Viewer est un habillage de la scène
+         complète, pas une carte/panneau autour du texte. */
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      transform: none;
+      padding: 0;
+
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+
+      color: #111111;
+      text-align: center;
+      text-shadow: none;
+      isolation: isolate;
+    }
+
+    #slidePresentation.cover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+
+      /* Reproduction du "slightly fades the scene around the text"
+         de Scene Viewer : voile large, doux, sans bord perceptible. */
+      background:
+        radial-gradient(
+          ellipse 48% 30% at 50% 50%,
+          rgba(244, 244, 239, 0.88) 0%,
+          rgba(244, 244, 239, 0.84) 24%,
+          rgba(244, 244, 239, 0.70) 42%,
+          rgba(244, 244, 239, 0.48) 56%,
+          rgba(244, 244, 239, 0.24) 68%,
+          rgba(244, 244, 239, 0.08) 77%,
+          rgba(244, 244, 239, 0.00) 86%
+        );
+    }
+
+    #slidePresentation.none {
+      display: none;
+    }
+
+    #presentationTitle {
+      font-size: clamp(22px, 2.2vw, 38px);
+      line-height: 1.12;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    #presentationDescription {
+      margin-top: 8px;
+      font-size: clamp(13px, 1.2vw, 19px);
+      line-height: 1.35;
+      font-weight: 400;
+      font-style: italic;
+      white-space: pre-line;
+    }
+
+    #presentationDescription:empty {
+      display: none;
+    }
+
+    /* Typographie Cover proche de Scene Viewer.
+       Le mode Caption en haut reste strictement inchangé. */
+    #slidePresentation.cover #presentationTitle {
+      max-width: min(760px, 82vw);
+      font-size: clamp(34px, 3.4vw, 52px);
+      line-height: 1.08;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    #slidePresentation.cover #presentationDescription {
+      max-width: min(720px, 80vw);
+      margin-top: 10px;
+      font-size: clamp(18px, 1.65vw, 25px);
+      line-height: 1.30;
+      font-weight: 400;
+    }
