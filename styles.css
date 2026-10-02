@@ -311,8 +311,11 @@ html,
       left: 50%;
       bottom: 14px;
       transform: translateX(-50%);
-      z-index: 110;
-      display: none;
+      z-index: 10000;
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
       align-items: center;
       gap: 14px;
       padding: 8px 10px;
