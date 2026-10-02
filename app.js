@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261002-BOAT3";
+      "SIG2026-20261002-CINEMA";
 
     console.log(
       "BUILD :",
@@ -1737,6 +1737,11 @@
           "nightTint"
         );
 
+      const cinema =
+        document.getElementById(
+          "cinemaGrade"
+        );
+
 
       function setSun(
         enabled
@@ -1762,12 +1767,39 @@
       }
 
 
+      function setCinemaMode(
+        mode
+      ) {
+        const allowed = [
+          "neutral",
+          "sun",
+          "storm",
+          "night"
+        ];
+
+        const nextMode =
+          allowed.includes(
+            mode
+          )
+          ?
+          mode
+          :
+          "neutral";
+
+        cinema.className =
+          nextMode;
+      }
+
+
       return {
         setSun:
           setSun,
 
         setNight:
-          setNight
+          setNight,
+
+        setCinemaMode:
+          setCinemaMode
       };
     }
 
@@ -1919,6 +1951,26 @@
 
         ambientController.setNight(
           nightActive
+        );
+
+        ambientController.setCinemaMode(
+          nightActive
+          ?
+          "night"
+          :
+          (
+            rainActive
+            ?
+            "storm"
+            :
+            (
+              sunActive
+              ?
+              "sun"
+              :
+              "neutral"
+            )
+          )
         );
 
         // Étoiles natives Esri uniquement : elles sont réellement
