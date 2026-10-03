@@ -15,12 +15,11 @@ html,
       font-family: "Avenir Next", Avenir, sans-serif;
     }
 
-    /* Très léger renforcement du rendu 3D uniquement.
-       Le but est de faire ressortir le mesh sans l'assombrir. */
+    /* Pas de filtre CSS sur le canvas WebGL :
+       cela évite une passe GPU plein écran coûteuse. */
     #viewDiv canvas {
       filter:
-        contrast(1.05)
-        saturate(1.07);
+        none;
     }
 
     #cinemaGrade,
@@ -112,140 +111,110 @@ html,
     }
 
     #filmGrain {
-      z-index: 85;
-      opacity: 0.026;
-      mix-blend-mode: soft-light;
-      background-image:
-        url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.75'/%3E%3C/svg%3E");
-      background-size:
-        180px
-        180px;
-      animation:
-        filmGrainShift
-        850ms
-        steps(2)
-        infinite;
-      will-change:
-        transform;
+      display:
+        none;
     }
 
-    @keyframes filmGrainShift {
-      0% {
-        transform:
-          translate3d(
-            0,
-            0,
-            0
-          );
-      }
-
-      25% {
-        transform:
-          translate3d(
-            -1.2%,
-            0.8%,
-            0
-          );
-      }
-
-      50% {
-        transform:
-          translate3d(
-            0.9%,
-            -0.6%,
-            0
-          );
-      }
-
-      75% {
-        transform:
-          translate3d(
-            -0.5%,
-            -0.9%,
-            0
-          );
-      }
-
-      100% {
-        transform:
-          translate3d(
-            0.6%,
-            0.4%,
-            0
-          );
-      }
-    }
 
     #sunRays {
-      z-index: 86;
-      display: block;
-      opacity: 0;
-      visibility: visible;
-      overflow: hidden;
-      mix-blend-mode: screen;
-      pointer-events: none;
+      z-index:
+        86;
 
-      /* Soleil léger en haut à gauche avec irisation photo. */
-      background:
-        radial-gradient(
-          circle at 12% 10%,
-          rgba(255,255,255,0.88) 0%,
-          rgba(255,247,214,0.78) 1.6%,
-          rgba(255,224,142,0.42) 5.5%,
-          rgba(255,192,76,0.12) 10.5%,
-          rgba(255,170,55,0.03) 16.5%,
-          rgba(255,170,55,0) 24%
-        ),
+      display:
+        block;
 
-        radial-gradient(
-          circle at 20% 18%,
-          rgba(255,175,60,0.10) 0%,
-          rgba(255,170,60,0.035) 4%,
-          rgba(255,165,55,0) 9%
-        ),
+      visibility:
+        visible;
 
-        radial-gradient(
-          circle at 28% 26%,
-          rgba(255,200,90,0.07) 0%,
-          rgba(255,190,75,0.022) 4.5%,
-          rgba(255,180,70,0) 10%
-        ),
+      opacity:
+        0;
 
-        radial-gradient(
-          circle at 39% 39%,
-          rgba(90,180,255,0.035) 0%,
-          rgba(90,180,255,0.012) 4.2%,
-          rgba(90,180,255,0) 10%
-        ),
+      /* On ne compose plus l'effet sur tout l'écran :
+         seulement une petite zone en haut à gauche. */
+      inset:
+        auto;
 
-        radial-gradient(
-          circle at 45% 47%,
-          rgba(255,130,80,0.04) 0%,
-          rgba(255,130,80,0.012) 5%,
-          rgba(255,130,80,0) 11%
-        ),
+      top:
+        -34px;
 
-        radial-gradient(
-          ellipse at 12% 10%,
-          rgba(255,220,145,0.10) 0%,
-          rgba(255,198,98,0.028) 22%,
-          rgba(255,186,78,0) 42%
+      left:
+        -34px;
+
+      width:
+        min(
+          430px,
+          46vw
         );
 
-      filter:
-        blur(0.5px);
+      height:
+        min(
+          430px,
+          46vw
+        );
+
+      overflow:
+        hidden;
+
+      border-radius:
+        50%;
+
+      pointer-events:
+        none;
+
+      mix-blend-mode:
+        screen;
+
+      will-change:
+        opacity;
 
       transition:
         opacity
-        780ms
+        650ms
         ease;
 
-      animation:
-        sunPhotoPulse
-        8.8s
-        ease-in-out
-        infinite
-        alternate;
+      background:
+        radial-gradient(
+          circle at 32% 30%,
+          rgba(255,255,255,0.92) 0%,
+          rgba(255,251,229,0.84) 1.4%,
+          rgba(255,225,145,0.48) 4.8%,
+          rgba(255,188,72,0.14) 9.5%,
+          rgba(255,171,52,0.035) 15.5%,
+          rgba(255,171,52,0) 24%
+        ),
+
+        radial-gradient(
+          circle at 46% 43%,
+          rgba(255,188,72,0.085) 0%,
+          rgba(255,176,58,0.028) 4.5%,
+          rgba(255,176,58,0) 10%
+        ),
+
+        radial-gradient(
+          circle at 57% 54%,
+          rgba(110,195,255,0.040) 0%,
+          rgba(110,195,255,0.012) 4.5%,
+          rgba(110,195,255,0) 10%
+        ),
+
+        radial-gradient(
+          circle at 68% 65%,
+          rgba(255,135,84,0.045) 0%,
+          rgba(255,135,84,0.014) 5%,
+          rgba(255,135,84,0) 11%
+        ),
+
+        radial-gradient(
+          ellipse at 32% 30%,
+          rgba(255,219,140,0.095) 0%,
+          rgba(255,197,96,0.024) 24%,
+          rgba(255,186,74,0) 43%
+        );
+
+      filter:
+        blur(
+          0.35px
+        );
     }
 
 
@@ -261,35 +230,34 @@ html,
 
       background:
         conic-gradient(
-          from 0deg at 12% 10%,
+          from 0deg at 32% 30%,
           rgba(255,248,220,0) 0deg,
-          rgba(255,248,220,0.12) 2deg,
-          rgba(255,248,220,0) 5deg,
-          rgba(255,248,220,0.08) 18deg,
+          rgba(255,248,220,0.13) 1.5deg,
+          rgba(255,248,220,0) 4deg,
+          rgba(255,248,220,0.075) 19deg,
           rgba(255,248,220,0) 23deg,
-          rgba(255,248,220,0.07) 48deg,
-          rgba(255,248,220,0) 54deg,
-          rgba(255,248,220,0.10) 88deg,
-          rgba(255,248,220,0) 95deg,
-          rgba(255,248,220,0.06) 132deg,
+          rgba(255,248,220,0.060) 50deg,
+          rgba(255,248,220,0) 55deg,
+          rgba(255,248,220,0.095) 88deg,
+          rgba(255,248,220,0) 94deg,
+          rgba(255,248,220,0.055) 132deg,
           rgba(255,248,220,0) 138deg,
-          rgba(255,248,220,0.07) 184deg,
-          rgba(255,248,220,0) 191deg,
-          rgba(255,248,220,0.08) 236deg,
-          rgba(255,248,220,0) 243deg,
-          rgba(255,248,220,0.10) 302deg,
-          rgba(255,248,220,0) 311deg,
+          rgba(255,248,220,0.065) 184deg,
+          rgba(255,248,220,0) 190deg,
+          rgba(255,248,220,0.075) 236deg,
+          rgba(255,248,220,0) 242deg,
+          rgba(255,248,220,0.095) 302deg,
+          rgba(255,248,220,0) 309deg,
           rgba(255,248,220,0) 360deg
         );
 
       opacity:
-        0.62;
+        0.64;
 
       filter:
-        blur(2.4px);
-
-      transform:
-        scale(1.14);
+        blur(
+          1.8px
+        );
     }
 
 
@@ -305,33 +273,30 @@ html,
 
       background:
         radial-gradient(
-          circle at 23% 19%,
-          rgba(255,236,180,0.10) 0%,
-          rgba(255,236,180,0.035) 3.5%,
-          rgba(255,236,180,0) 8%
+          circle at 48% 44%,
+          rgba(255,224,165,0.095) 0%,
+          rgba(255,224,165,0.025) 4%,
+          rgba(255,224,165,0) 9%
         ),
+
         radial-gradient(
-          circle at 31% 28%,
-          rgba(255,160,80,0.08) 0%,
-          rgba(255,160,80,0.024) 3.5%,
-          rgba(255,160,80,0) 8%
+          circle at 57% 53%,
+          rgba(255,150,78,0.070) 0%,
+          rgba(255,150,78,0.020) 4%,
+          rgba(255,150,78,0) 9%
         ),
+
         radial-gradient(
-          circle at 37% 36%,
-          rgba(120,210,255,0.05) 0%,
-          rgba(120,210,255,0.016) 3.5%,
-          rgba(120,210,255,0) 8%
-        ),
-        linear-gradient(
-          45deg,
-          rgba(255,235,190,0.00) 13%,
-          rgba(255,235,190,0.045) 27%,
-          rgba(255,230,170,0.014) 40%,
-          rgba(255,220,150,0.00) 57%
+          circle at 65% 62%,
+          rgba(118,202,255,0.045) 0%,
+          rgba(118,202,255,0.012) 4%,
+          rgba(118,202,255,0) 9%
         );
 
       filter:
-        blur(10px);
+        blur(
+          5px
+        );
 
       opacity:
         0.56;
@@ -340,36 +305,13 @@ html,
 
     #sunRays.active {
       opacity:
-        0.58;
+        0.54;
     }
 
 
     #sunRays.transitioning {
       opacity:
         0 !important;
-    }
-
-
-    @keyframes sunPhotoPulse {
-      from {
-        transform:
-          scale(1)
-          translate3d(
-            0,
-            0,
-            0
-          );
-      }
-
-      to {
-        transform:
-          scale(1.01)
-          translate3d(
-            1.5px,
-            1px,
-            0
-          );
-      }
     }
 
 
