@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261003-TRAFFIC-SUN-FIX";
+      "SIG2026-20261003-PERF-SUN";
 
     console.log(
       "BUILD :",
@@ -727,14 +727,14 @@
       window.setInterval(
         function() {
           phase +=
-            0.20;
+            0.28;
 
           const offset =
             Math.sin(
               phase
             )
             *
-            7.5;
+            5.5;
 
           liveWaterLayers.forEach(
             function(item) {
@@ -749,7 +749,7 @@
             }
           );
         },
-        150
+        650
       );
     }
 
@@ -3747,11 +3747,11 @@
           currentTime
         ) {
           // Le clone/réaffectation du symbole 3D est coûteux.
-          // 12,5 mises à jour/s suffisent visuellement pour le cap.
+          // ~8 mises à jour/s suffisent pour la démo et soulagent le GPU.
           if (
             currentTime -
             vehicle.lastHeadingUpdate <
-            80
+            125
           ) {
             return;
           }
@@ -3767,7 +3767,7 @@
 
           if (
             Math.abs(delta) <
-            1.0
+            1.5
           ) {
             return;
           }
