@@ -178,57 +178,64 @@ html,
 
     #sunRays {
       z-index: 86;
-      display: none;
+      display: block;
       opacity: 0;
+      visibility: visible;
       overflow: hidden;
       mix-blend-mode: screen;
+      pointer-events: none;
 
-      /* Contre-jour photo : source chaude + halo + flares fantômes. */
+      /* Contre-jour photo léger, placé en haut à gauche. */
       background:
         radial-gradient(
-          circle at 69% 13%,
-          rgba(255, 255, 255, 0.98) 0%,
-          rgba(255, 248, 215, 0.95) 1.7%,
-          rgba(255, 217, 118, 0.56) 5.5%,
-          rgba(255, 181, 58, 0.18) 11%,
-          rgba(255, 160, 40, 0.04) 19%,
-          rgba(255, 160, 40, 0) 29%
+          circle at 14% 10%,
+          rgba(255, 255, 255, 0.78) 0%,
+          rgba(255, 250, 226, 0.66) 1.4%,
+          rgba(255, 224, 145, 0.31) 4.8%,
+          rgba(255, 188, 74, 0.10) 9.5%,
+          rgba(255, 170, 52, 0.025) 15%,
+          rgba(255, 170, 52, 0) 24%
         ),
 
         radial-gradient(
-          circle at 58% 27%,
-          rgba(255, 186, 70, 0.18) 0%,
-          rgba(255, 178, 55, 0.08) 3.8%,
-          rgba(255, 170, 45, 0) 8.5%
+          circle at 24% 22%,
+          rgba(255, 190, 82, 0.085) 0%,
+          rgba(255, 182, 68, 0.035) 3.8%,
+          rgba(255, 175, 60, 0) 8.8%
         ),
 
         radial-gradient(
-          circle at 49% 38%,
-          rgba(255, 198, 82, 0.15) 0%,
-          rgba(255, 185, 60, 0.05) 4.5%,
-          rgba(255, 175, 50, 0) 10%
+          circle at 33% 31%,
+          rgba(255, 200, 92, 0.065) 0%,
+          rgba(255, 188, 72, 0.025) 4.4%,
+          rgba(255, 180, 66, 0) 9.6%
         ),
 
         radial-gradient(
-          circle at 38% 52%,
-          rgba(255, 205, 90, 0.11) 0%,
-          rgba(255, 190, 70, 0.035) 5%,
-          rgba(255, 180, 60, 0) 12%
+          circle at 43% 43%,
+          rgba(255, 210, 105, 0.048) 0%,
+          rgba(255, 195, 82, 0.016) 5%,
+          rgba(255, 184, 70, 0) 11.5%
         ),
 
         radial-gradient(
-          ellipse at 69% 13%,
-          rgba(255, 218, 130, 0.16) 0%,
-          rgba(255, 198, 95, 0.045) 22%,
-          rgba(255, 185, 70, 0) 43%
+          ellipse at 14% 10%,
+          rgba(255, 220, 142, 0.085) 0%,
+          rgba(255, 198, 98, 0.022) 21%,
+          rgba(255, 186, 78, 0) 40%
         );
 
       filter:
-        blur(0.8px);
+        blur(0.55px);
+
+      transition:
+        opacity
+        780ms
+        ease;
 
       animation:
         sunPhotoPulse
-        7.5s
+        8.5s
         ease-in-out
         infinite
         alternate;
@@ -247,35 +254,35 @@ html,
 
       background:
         conic-gradient(
-          from 2deg at 69% 13%,
-          rgba(255, 245, 205, 0.00) 0deg,
-          rgba(255, 245, 205, 0.26) 2deg,
-          rgba(255, 245, 205, 0.00) 5deg,
-          rgba(255, 245, 205, 0.20) 18deg,
-          rgba(255, 245, 205, 0.00) 23deg,
-          rgba(255, 245, 205, 0.15) 48deg,
-          rgba(255, 245, 205, 0.00) 54deg,
-          rgba(255, 245, 205, 0.22) 88deg,
-          rgba(255, 245, 205, 0.00) 94deg,
-          rgba(255, 245, 205, 0.16) 128deg,
-          rgba(255, 245, 205, 0.00) 136deg,
-          rgba(255, 245, 205, 0.17) 182deg,
-          rgba(255, 245, 205, 0.00) 190deg,
-          rgba(255, 245, 205, 0.18) 235deg,
-          rgba(255, 245, 205, 0.00) 242deg,
-          rgba(255, 245, 205, 0.22) 302deg,
-          rgba(255, 245, 205, 0.00) 310deg,
-          rgba(255, 245, 205, 0.00) 360deg
+          from 3deg at 14% 10%,
+          rgba(255, 248, 220, 0.00) 0deg,
+          rgba(255, 248, 220, 0.105) 2deg,
+          rgba(255, 248, 220, 0.00) 5deg,
+          rgba(255, 248, 220, 0.075) 18deg,
+          rgba(255, 248, 220, 0.00) 23deg,
+          rgba(255, 248, 220, 0.060) 48deg,
+          rgba(255, 248, 220, 0.00) 54deg,
+          rgba(255, 248, 220, 0.090) 88deg,
+          rgba(255, 248, 220, 0.00) 95deg,
+          rgba(255, 248, 220, 0.055) 132deg,
+          rgba(255, 248, 220, 0.00) 138deg,
+          rgba(255, 248, 220, 0.065) 184deg,
+          rgba(255, 248, 220, 0.00) 191deg,
+          rgba(255, 248, 220, 0.070) 236deg,
+          rgba(255, 248, 220, 0.00) 243deg,
+          rgba(255, 248, 220, 0.085) 302deg,
+          rgba(255, 248, 220, 0.00) 311deg,
+          rgba(255, 248, 220, 0.00) 360deg
         );
 
       opacity:
-        0.74;
+        0.58;
 
       filter:
-        blur(2.2px);
+        blur(2.6px);
 
       transform:
-        scale(1.18);
+        scale(1.12);
     }
 
 
@@ -291,35 +298,35 @@ html,
 
       background:
         linear-gradient(
-          132deg,
-          rgba(255, 234, 175, 0.00) 24%,
-          rgba(255, 234, 175, 0.075) 38%,
-          rgba(255, 226, 160, 0.025) 49%,
-          rgba(255, 220, 145, 0.00) 61%
+          47deg,
+          rgba(255, 236, 188, 0.00) 16%,
+          rgba(255, 236, 188, 0.042) 29%,
+          rgba(255, 228, 168, 0.016) 42%,
+          rgba(255, 220, 150, 0.00) 57%
         );
 
       filter:
-        blur(9px);
+        blur(11px);
 
       opacity:
-        0.72;
+        0.50;
     }
 
 
     #sunRays.active {
-      display:
-        block;
-
       opacity:
-        0.92;
+        0.48;
+    }
+
+
+    #sunRays.transitioning {
+      opacity:
+        0 !important;
     }
 
 
     @keyframes sunPhotoPulse {
       from {
-        opacity:
-          0.79;
-
         transform:
           scale(1.00)
           translate3d(
@@ -330,14 +337,11 @@ html,
       }
 
       to {
-        opacity:
-          0.96;
-
         transform:
-          scale(1.018)
+          scale(1.010)
           translate3d(
-            3px,
-            2px,
+            1.5px,
+            1px,
             0
           );
       }
