@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261002-TRAFFIC-WEATHER-SUN";
+      "SIG2026-20261003-SUN-INTEGRATED";
 
     console.log(
       "BUILD :",
@@ -1848,6 +1848,28 @@
       }
 
 
+      function fadeSunForTransition() {
+        sun.classList.add(
+          "transitioning"
+        );
+      }
+
+
+      function restoreSunAfterTransition() {
+        window.requestAnimationFrame(
+          function() {
+            window.requestAnimationFrame(
+              function() {
+                sun.classList.remove(
+                  "transitioning"
+                );
+              }
+            );
+          }
+        );
+      }
+
+
       function setNight(
         enabled
       ) {
@@ -1953,6 +1975,12 @@
       return {
         setSun:
           setSun,
+
+        fadeSunForTransition:
+          fadeSunForTransition,
+
+        restoreSunAfterTransition:
+          restoreSunAfterTransition,
 
         setNight:
           setNight,
@@ -2315,6 +2343,10 @@
           index
         );
 
+        // L'effet contre-jour disparaît pendant le mouvement caméra.
+        // Ainsi il ne donne plus l'impression d'être "collé" à l'écran.
+        ambientController.fadeSunForTransition();
+
         try {
           await slideEntries[
             index
@@ -2339,6 +2371,9 @@
             index
           );
 
+          // Réapparition douce uniquement une fois la caméra stabilisée.
+          ambientController.restoreSunAfterTransition();
+
           // Les couches d'animation ne font pas partie
           // des slides enregistrées : on les maintient visibles.
           roadVehicleLayer.visible =
@@ -2352,6 +2387,8 @@
             "Erreur application diapo :",
             error
           );
+
+          ambientController.restoreSunAfterTransition();
         }
         finally {
           slideTransitionRunning =
