@@ -3,7 +3,7 @@
     // ==========================================================
 
     const BUILD_ID =
-      "SIG2026-20261003-SUN-INTEGRATED";
+      "SIG2026-20261003-TRAFFIC-SUN-FIX";
 
     console.log(
       "BUILD :",
@@ -3795,185 +3795,86 @@
         // ANTI-COLLISION VISUEL
         // ======================================================
         //
-        // Deux cas distincts :
-        // 1. suivi sur le même axe -> le véhicule arrière adapte
-        //    sa vitesse sans s'arrêter inutilement ;
-        // 2. croisement -> priorité classique BUS/TRUCK puis ID.
-        //
-        // Cela évite à la fois les chevauchements et les bouchons.
+        // Objectifs :
+        // - empêcher les chevauchements,
+        // - éviter les bouchons artificiels,
+        // - suivi uniquement sur la même route,
+        // - croisements gérés séparément.
         // ======================================================
-
-        function headingUnitVector(
-          headingDegrees
-        ) {
-          const radians =
-            headingDegrees *
-            Math.PI /
-            180;
-
-          return {
-            x:
-              Math.sin(
-                radians
-              ),
-
-            y:
-              Math.cos(
-                radians
-              )
-          };
-        }
-
-
-        function headingDifference(
-          headingA,
-          headingB
-        ) {
-          return Math.abs(
-            shortestAngleDelta(
-              headingA,
-              headingB
-            )
-          );
-        }
-
-
-        function currentVehicleHeading(
-          vehicle
-        ) {
-          return smoothHeading(
-            vehicle.route,
-            vehicle.currentDistance,
-            view.spatialReference
-          );
-        }
-
 
         function followingRelation(
           vehicleA,
           vehicleB
         ) {
-          const headingA =
-            currentVehicleHeading(
-              vehicleA
-            );
-
-          const headingB =
-            currentVehicleHeading(
-              vehicleB
-            );
-
-          // Pas du suivi si les directions divergent franchement.
+          // Le suivi longitudinal ne concerne que deux véhicules
+          // qui utilisent exactement la même route.
           if (
-            headingDifference(
-              headingA,
-              headingB
-            ) >
-            30
+            vehicleA.route !==
+            vehicleB.route
           ) {
             return null;
           }
 
-          const dxAB =
-            vehicleB.currentPosition.x -
-            vehicleA.currentPosition.x;
+          const routeLength =
+            vehicleA.route.totalLength;
 
-          const dyAB =
-            vehicleB.currentPosition.y -
-            vehicleA.currentPosition.y;
-
-          const distance =
-            Math.hypot(
-              dxAB,
-              dyAB
-            );
-
-          // Au-delà, ce n'est pas encore un problème de suivi.
-          if (
-            distance >
-            34
-          ) {
-            return null;
-          }
-
-          function relationFor(
-            follower,
-            leader,
-            dx,
-            dy,
-            heading
-          ) {
-            const forward =
-              headingUnitVector(
-                heading
-              );
-
-            const longitudinal =
-              dx *
-              forward.x +
-              dy *
-              forward.y;
-
-            const lateral =
-              Math.abs(
-                dx *
-                forward.y -
-                dy *
-                forward.x
-              );
-
-            // Couloir étroit : évite que deux routes parallèles
-            // proches se bloquent mutuellement.
-            if (
-              longitudinal >
-              0.75
-              &&
-              lateral <
-              4.2
-            ) {
-              return {
-                follower:
-                  follower,
-
-                leader:
-                  leader,
-
-                gap:
-                  distance,
-
-                longitudinal:
-                  longitudinal,
-
-                lateral:
-                  lateral
-              };
-            }
-
-            return null;
-          }
-
-          const aFollowsB =
-            relationFor(
-              vehicleA,
-              vehicleB,
-              dxAB,
-              dyAB,
-              headingA
-            );
+          let delta =
+            vehicleB.currentDistance -
+            vehicleA.currentDistance;
 
           if (
-            aFollowsB
+            delta >
+            routeLength /
+            2
           ) {
-            return aFollowsB;
+            delta -=
+              routeLength;
           }
 
-          return relationFor(
-            vehicleB,
-            vehicleA,
-            -dxAB,
-            -dyAB,
-            headingB
-          );
+          if (
+            delta <
+            -routeLength /
+            2
+          ) {
+            delta +=
+              routeLength;
+          }
+
+          // B devant A.
+          if (
+            delta >
+            0.45
+          ) {
+            return {
+              follower:
+                vehicleA,
+
+              leader:
+                vehicleB,
+
+              gap:
+                delta
+            };
+          }
+
+          // A devant B.
+          if (
+            delta <
+            -0.45
+          ) {
+            return {
+              follower:
+                vehicleB,
+
+              leader:
+                vehicleA,
+
+              gap:
+                -delta
+            };
+          }
+
+          return null;
         }
 
 
@@ -3984,17 +3885,17 @@
             vehicle.type ===
             "TRUCK"
           ) {
-            return 11.5;
+            return 7.5;
           }
 
           if (
             vehicle.type ===
             "BUS"
           ) {
-            return 10.0;
+            return 6.5;
           }
 
-          return 6.5;
+          return 4.2;
         }
 
 
@@ -4005,24 +3906,24 @@
             vehicle.type ===
             "TRUCK"
           ) {
-            return 9.0;
+            return 5.8;
           }
 
           if (
             vehicle.type ===
             "BUS"
           ) {
-            return 8.0;
+            return 5.2;
           }
 
-          return 5.5;
+          return 4.0;
         }
 
 
         function vehiclePriorityRank(
           vehicle
         ) {
-          // Priorité uniquement aux croisements.
+          // Priorité légère uniquement aux intersections.
           if (
             vehicle.type ===
             "BUS"
@@ -4128,7 +4029,6 @@
         function updateCollisionState(
           currentTime
         ) {
-          // 10 Hz suffit, et évite de charger le rendu 3D.
           if (
             currentTime -
             lastCollisionCheck <
@@ -4146,13 +4046,13 @@
           const newFollowingTargets =
             new Map();
 
-          // Croisements : anticipation courte pour éviter les faux arrêts.
+          // Anticipation volontairement courte aux croisements.
           const intersectionSamples = [
-            0.35,
-            0.70,
-            1.05,
-            1.40,
-            1.80
+            0.28,
+            0.55,
+            0.90,
+            1.25,
+            1.60
           ];
 
           for (
@@ -4171,21 +4071,15 @@
               const vehicleB =
                 roadVehicles[j];
 
-              const distanceNow =
-                distanceMeters(
-                  vehicleA.currentPosition.x,
-                  vehicleA.currentPosition.y,
-                  vehicleB.currentPosition.x,
-                  vehicleB.currentPosition.y,
-                  view.spatialReference
-                );
-
               const following =
                 followingRelation(
                   vehicleA,
                   vehicleB
                 );
 
+              // ==================================================
+              // SUIVI : même route
+              // ==================================================
               if (
                 following
               ) {
@@ -4210,23 +4104,10 @@
                 const desiredGap =
                   baseGap +
                   closingSpeed *
-                  1.15;
-
-                const projectedGap =
-                  following.gap +
-                  (
-                    leader.currentSpeedMs -
-                    follower.currentSpeedMs
-                  )
-                  *
-                  1.6;
+                  0.75;
 
                 if (
                   following.gap <
-                  desiredGap *
-                  1.18
-                  ||
-                  projectedGap <
                   desiredGap
                 ) {
                   let targetSpeed;
@@ -4234,27 +4115,26 @@
                   if (
                     following.gap <
                     baseGap *
-                    0.56
+                    0.52
                   ) {
-                    // Seulement en cas de proximité réelle :
-                    // freinage fort pour empêcher tout chevauchement.
+                    // Très proche : freinage franc, sans arrêt inutile.
                     targetSpeed =
                       Math.max(
                         0,
                         leader.currentSpeedMs *
-                        0.45
+                        0.58
                       );
                   }
                   else {
-                    // Suivi fluide : on se cale sur la vitesse du véhicule
-                    // devant au lieu de faire stop / redémarrage.
+                    // Suivi fluide : on se cale quasiment sur la vitesse
+                    // du véhicule devant.
                     targetSpeed =
                       Math.min(
                         follower.speedMs,
                         Math.max(
-                          0.4,
+                          0.6,
                           leader.currentSpeedMs *
-                          0.96
+                          0.995
                         )
                       );
                   }
@@ -4266,15 +4146,24 @@
                   );
                 }
 
-                // Un couple en suivi ne doit pas être traité comme
-                // un conflit d'intersection.
                 continue;
               }
 
-              // Les véhicules éloignés ne nécessitent aucun calcul futur.
+              // ==================================================
+              // CROISEMENT : routes différentes
+              // ==================================================
+              const distanceNow =
+                distanceMeters(
+                  vehicleA.currentPosition.x,
+                  vehicleA.currentPosition.y,
+                  vehicleB.currentPosition.x,
+                  vehicleB.currentPosition.y,
+                  view.spatialReference
+                );
+
               if (
                 distanceNow >
-                38
+                22
               ) {
                 continue;
               }
@@ -4298,10 +4187,8 @@
               ) {
                 const predictedDistanceA =
                   (
-                    vehicleA.currentDistance
-                    +
-                    vehicleA.currentSpeedMs
-                    *
+                    vehicleA.currentDistance +
+                    vehicleA.currentSpeedMs *
                     t
                   )
                   %
@@ -4309,10 +4196,8 @@
 
                 const predictedDistanceB =
                   (
-                    vehicleB.currentDistance
-                    +
-                    vehicleB.currentSpeedMs
-                    *
+                    vehicleB.currentDistance +
+                    vehicleB.currentSpeedMs *
                     t
                   )
                   %
@@ -4465,33 +4350,45 @@
                   vehicle.speedMs
                 );
 
-              // Freinage progressif pour le suivi, plus franc uniquement
-              // lorsqu'un arrêt d'intersection est réellement nécessaire.
+              const brakingRate =
+                isBlocked
+                ?
+                8.8
+                :
+                (
+                  vehicle.type === "TRUCK"
+                  ?
+                  5.8
+                  :
+                  (
+                    vehicle.type === "BUS"
+                    ?
+                    5.4
+                    :
+                    4.8
+                  )
+                );
+
+              const accelerationRate =
+                vehicle.type === "TRUCK"
+                ?
+                2.3
+                :
+                (
+                  vehicle.type === "BUS"
+                  ?
+                  2.6
+                  :
+                  3.0
+                );
+
               const rate =
                 vehicle.targetSpeedMs <
                 vehicle.currentSpeedMs
                 ?
-                (
-                  isBlocked
-                  ?
-                  10.0
-                  :
-                  (
-                    vehicle.type === "TRUCK"
-                    ?
-                    7.5
-                    :
-                    (
-                      vehicle.type === "BUS"
-                      ?
-                      7.0
-                      :
-                      6.4
-                    )
-                  )
-                )
+                brakingRate
                 :
-                3.4;
+                accelerationRate;
 
               vehicle.currentSpeedMs =
                 moveToward(
