@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>BUS B — Retour OAuth ArcGIS</title>
+  <!-- Basé sur le callback officiel Esri/jsapi-resources (licence Apache 2.0). -->
+  <script>
+    function finishOAuth() {
+      if (!window.opener) {
+        document.getElementById("status").textContent =
+          "La fenêtre de retour OAuth ne peut pas communiquer avec BUS B. " +
+          "Réessayez depuis l'application en autorisant les pop-ups.";
+        return;
+      }
+      try {
+        if (window.location.hash) {
+          window.opener.dispatchEvent(new CustomEvent(
+            "arcgis:auth:hash",
+            { detail: window.location.hash }
+          ));
+        } else if (window.location.search) {
+          window.opener.dispatchEvent(new CustomEvent(
+            "arcgis:auth:location:search",
+            { detail: window.location.search }
+          ));
+        }
+        window.close();
+      } catch (error) {
+        document.getElementById("status").textContent =
+          "Le retour OAuth a échoué. Réessayez depuis BUS B.";
+      }
+    }
+    window.addEventListener("load", finishOAuth);
+  </script>
+</head>
+<body>
+  <p id="status">Retour à BUS B après authentification…</p>
+</body>
+</html>
