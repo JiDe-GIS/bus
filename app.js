@@ -10,20 +10,10 @@
       BUILD_ID
     );
 
-    const BUS_QUERY = new URLSearchParams(window.location.search);
-    const BUS_OAUTH_PENDING_KEY = "saintes-bus-b-oauth-pending";
-    const ORG_B = BUS_QUERY.get("org")?.toUpperCase() === "B"
-      || (!BUS_QUERY.has("org")
-          && sessionStorage.getItem(BUS_OAUTH_PENDING_KEY) === "B");
-
-    // La redirection OAuth peut revenir sur /bus/ sans conserver ?org=B.
-    // Restaurer l'organisation sans changer les liens d'origine A.
-    if (ORG_B && BUS_QUERY.get("org") !== "B") {
-      const restoredUrl = new URL(window.location.href);
-      restoredUrl.searchParams.set("org", "B");
-      window.history.replaceState({}, document.title,
-        restoredUrl.pathname + restoredUrl.search + restoredUrl.hash);
-    }
+    // B est sélectionnée uniquement par l'URL ; A reste l'organisation par défaut.
+    // B utilise désormais une popup, plus de retour OAuth sur l'onglet principal.
+    const ORG_B = new URLSearchParams(window.location.search)
+      .get("org")?.toUpperCase() === "B";
 
     const PORTAL_URL = ORG_B
       ? "https://esrifrance.maps.arcgis.com"
@@ -155,14 +145,15 @@
         portalUrl:
           PORTAL_URL,
 
-        // En dehors du Dashboard, B utilise la redirection classique,
-        // compatible avec un onglet principal (A reste inchangée).
-        // Dans le Dashboard, B utilise la popup OAuth.
+        // B : toujours une popup (également en URL directe).
+        // A : mode redirection d'origine, non modifié.
         popup:
-          ORG_B && window.self !== window.top,
+          ORG_B,
 
+        // Cette URL est déjà enregistrée dans l'item OAuth AGOL B.
+        // index.html relaie la réponse PKCE à la fenêtre ouvrante.
         popupCallbackUrl:
-          ORG_B ? "oauth-callback.html" : undefined,
+          ORG_B ? "https://jide-gis.github.io/bus/" : undefined,
 
         authNamespace:
           ORG_B ? "saintes-bus-esrifrance-b" : undefined,
@@ -182,30 +173,15 @@
       if (ORG_B) {
         const resource = PORTAL_URL + "/sharing";
 
-        // En accès direct, le parcours OAuth par redirection fonctionne
-        // sans fenêtre surgissante ni restriction d'iframe.
-        if (window.self === window.top) {
-          try {
-            await identityManager.checkSignInStatus(resource);
-            sessionStorage.removeItem(BUS_OAUTH_PENDING_KEY);
-            console.info("[BUS B OAuth] Session existante.");
-          } catch (error) {
-            sessionStorage.setItem(BUS_OAUTH_PENDING_KEY, "B");
-            console.info("[BUS B OAuth] Redirection de connexion.");
-            await identityManager.getCredential(resource);
-            sessionStorage.removeItem(BUS_OAUTH_PENDING_KEY);
-          }
-          return;
-        }
-
-        // En iframe ArcGIS Dashboards, lancer OAuth uniquement sur un clic
-        // puis montrer une explication utilisable en cas de popup bloquée.
+        // B en onglet autonome ou dans le Dashboard :
+        // ne jamais rediriger la page courante vers Esri France.
+        // Le bouton démarre OAuth popup dans un geste utilisateur.
         try {
           await identityManager.checkSignInStatus(resource);
-          console.info("[BUS B OAuth] Session existante dans le Dashboard.");
+          console.info("[BUS B OAuth] Session existante.");
           return;
         } catch (error) {
-          console.info("[BUS B OAuth] Session non disponible dans l'iframe.");
+          console.info("[BUS B OAuth] Session absente, connexion popup proposée.");
         }
 
         const background = document.createElement("div");
@@ -246,7 +222,7 @@
         openStandalone.target = "_blank";
         openStandalone.rel = "noopener noreferrer";
         openStandalone.textContent =
-          "Ouvrir BUS B dans un nouvel onglet (sans restriction d'iframe)";
+          "Ouvrir BUS B dans un nouvel onglet";
         openStandalone.style.cssText =
           "font-size:13px;color:white;text-decoration:underline";
 
@@ -266,7 +242,7 @@
               oAuthPopupConfirmation: false
             }).then(() => {
               background.remove();
-              console.info("[BUS B OAuth] Connexion Dashboard réussie.");
+              console.info("[BUS B OAuth] Authentification réussie.");
               resolve();
             }).catch((error) => {
               console.error("[BUS B OAuth] Échec :", error);
@@ -280,7 +256,7 @@
                 "Erreur : " + errorName +
                 (errorCode ? " (" + errorCode + ")" : "") +
                 " — " + errorMessage +
-                "\nSi la fenêtre est bloquée dans le Dashboard, " +
+                "\nSi le navigateur bloque les pop-ups, " +
                 "utilisez le lien ci-dessous pour ouvrir BUS B à part.";
               button.disabled = false;
               button.textContent = "Réessayer la connexion Esri France";
