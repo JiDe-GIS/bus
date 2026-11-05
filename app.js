@@ -10,9 +10,20 @@
       BUILD_ID
     );
 
-    const ORG_B =
-      new URLSearchParams(window.location.search)
-        .get("org")?.toUpperCase() === "B";
+    const BUS_QUERY = new URLSearchParams(window.location.search);
+    const BUS_OAUTH_PENDING_KEY = "saintes-bus-b-oauth-pending";
+    const ORG_B = BUS_QUERY.get("org")?.toUpperCase() === "B"
+      || (!BUS_QUERY.has("org")
+          && sessionStorage.getItem(BUS_OAUTH_PENDING_KEY) === "B");
+
+    // La redirection OAuth peut revenir sur /bus/ sans conserver ?org=B.
+    // Restaurer l'organisation sans changer les liens d'origine A.
+    if (ORG_B && BUS_QUERY.get("org") !== "B") {
+      const restoredUrl = new URL(window.location.href);
+      restoredUrl.searchParams.set("org", "B");
+      window.history.replaceState({}, document.title,
+        restoredUrl.pathname + restoredUrl.search + restoredUrl.hash);
+    }
 
     const PORTAL_URL = ORG_B
       ? "https://esrifrance.maps.arcgis.com"
@@ -144,8 +155,11 @@
         portalUrl:
           PORTAL_URL,
 
+        // En dehors du Dashboard, B utilise la redirection classique,
+        // compatible avec un onglet principal (A reste inchangée).
+        // Dans le Dashboard, B utilise la popup OAuth.
         popup:
-          ORG_B,
+          ORG_B && window.self !== window.top,
 
         popupCallbackUrl:
           ORG_B ? "oauth-callback.html" : undefined,
@@ -166,29 +180,110 @@
 
     async function authenticate() {
       if (ORG_B) {
-        const portalResource = PORTAL_URL + "/sharing";
+        const resource = PORTAL_URL + "/sharing";
+
+        // En accès direct, le parcours OAuth par redirection fonctionne
+        // sans fenêtre surgissante ni restriction d'iframe.
+        if (window.self === window.top) {
+          try {
+            await identityManager.checkSignInStatus(resource);
+            sessionStorage.removeItem(BUS_OAUTH_PENDING_KEY);
+            console.info("[BUS B OAuth] Session existante.");
+          } catch (error) {
+            sessionStorage.setItem(BUS_OAUTH_PENDING_KEY, "B");
+            console.info("[BUS B OAuth] Redirection de connexion.");
+            await identityManager.getCredential(resource);
+            sessionStorage.removeItem(BUS_OAUTH_PENDING_KEY);
+          }
+          return;
+        }
+
+        // En iframe ArcGIS Dashboards, lancer OAuth uniquement sur un clic
+        // puis montrer une explication utilisable en cas de popup bloquée.
         try {
-          await identityManager.checkSignInStatus(portalResource);
-          console.log("[OAuth B] Session existante.");
+          await identityManager.checkSignInStatus(resource);
+          console.info("[BUS B OAuth] Session existante dans le Dashboard.");
           return;
         } catch (error) {
-          console.log("[OAuth B] Une connexion interactive est requise.");
+          console.info("[BUS B OAuth] Session non disponible dans l'iframe.");
         }
-        const loginButton = document.createElement("button");
-        loginButton.textContent = "Se connecter à Esri France";
-        loginButton.type = "button";
-        loginButton.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2147483647;padding:15px 25px;background:#0C3A6B;color:white;border:0;border-radius:6px;cursor:pointer;font:16px Avenir,Arial,sans-serif";
-        document.body.appendChild(loginButton);
+
+        const background = document.createElement("div");
+        background.setAttribute("role", "region");
+        background.setAttribute("aria-label", "Connexion Esri France");
+        background.style.cssText =
+          "position:fixed;inset:0;z-index:2147483647;" +
+          "display:flex;flex-direction:column;align-items:center;" +
+          "justify-content:center;gap:12px;padding:24px;" +
+          "box-sizing:border-box;text-align:center;" +
+          "background:#115194;color:white;" +
+          "font:15px Avenir,Arial,sans-serif";
+
+        const heading = document.createElement("div");
+        heading.textContent = "Connexion ArcGIS Online — Esri France";
+        heading.style.cssText = "font-weight:bold;font-size:18px";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = "Se connecter à Esri France";
+        button.style.cssText =
+          "padding:13px 22px;background:#0C3A6B;color:white;" +
+          "border:0;border-radius:6px;cursor:pointer;" +
+          "font:14px Avenir,Arial,sans-serif";
+
+        const details = document.createElement("div");
+        details.setAttribute("aria-live", "polite");
+        details.style.cssText =
+          "max-width:550px;white-space:pre-wrap;" +
+          "font-size:12px;line-height:1.5;color:#fff";
+
+        const openStandalone = document.createElement("a");
+        const standaloneURL = new URL(window.location.href);
+        ["code", "state", "oauth_state"].forEach((key) =>
+          standaloneURL.searchParams.delete(key));
+        standaloneURL.searchParams.set("org", "B");
+        openStandalone.href = standaloneURL.href;
+        openStandalone.target = "_blank";
+        openStandalone.rel = "noopener noreferrer";
+        openStandalone.textContent =
+          "Ouvrir BUS B dans un nouvel onglet (sans restriction d'iframe)";
+        openStandalone.style.cssText =
+          "font-size:13px;color:white;text-decoration:underline";
+
+        background.append(heading, button, details, openStandalone);
+        document.body.appendChild(background);
+
         await new Promise((resolve) => {
-          loginButton.addEventListener("click", () => {
-            loginButton.disabled = true;
-            identityManager.getCredential(portalResource).then(() => {
-              loginButton.remove();
+          button.addEventListener("click", () => {
+            button.disabled = true;
+            button.textContent = "Authentification en cours…";
+            details.textContent =
+              "Autorisez la fenêtre ArcGIS Online ouverte par le navigateur.";
+
+            // Option Esri : pas de confirmation intermédiaire, car nous
+            // sommes déjà directement dans le gestionnaire d'un clic.
+            identityManager.getCredential(resource, {
+              oAuthPopupConfirmation: false
+            }).then(() => {
+              background.remove();
+              console.info("[BUS B OAuth] Connexion Dashboard réussie.");
               resolve();
             }).catch((error) => {
-              console.error("[OAuth B]", error);
-              loginButton.disabled = false;
-              loginButton.textContent = "Réessayer la connexion Esri France";
+              console.error("[BUS B OAuth] Échec :", error);
+              const errorName = String(error?.name || "OAuth");
+              const errorCode = String(error?.code || "");
+              const errorMessage = String(error?.message || "Connexion interrompue")
+                .replace(/(token|code|oauth_state|state)=([^&\\s]+)/gi,
+                  "$1=[masqué]")
+                .slice(0, 280);
+              details.textContent =
+                "Erreur : " + errorName +
+                (errorCode ? " (" + errorCode + ")" : "") +
+                " — " + errorMessage +
+                "\nSi la fenêtre est bloquée dans le Dashboard, " +
+                "utilisez le lien ci-dessous pour ouvrir BUS B à part.";
+              button.disabled = false;
+              button.textContent = "Réessayer la connexion Esri France";
             });
           });
         });
