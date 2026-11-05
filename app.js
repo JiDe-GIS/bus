@@ -10,17 +10,25 @@
       BUILD_ID
     );
 
-    const PORTAL_URL =
-      "https://saintongeromane.maps.arcgis.com";
+    const ORG_B =
+      new URLSearchParams(window.location.search)
+        .get("org")?.toUpperCase() === "B";
 
-    const CLIENT_ID =
-      "uVV1afs1BldtPI0l";
+    const PORTAL_URL = ORG_B
+      ? "https://esrifrance.maps.arcgis.com"
+      : "https://saintongeromane.maps.arcgis.com";
 
-    const WEBSCENE_ID =
-      "a874e00cced24ca6becd5f307189fcb3";
+    const CLIENT_ID = ORG_B
+      ? "Q5PBq2BEBIkj0UhH"
+      : "uVV1afs1BldtPI0l";
 
-    const AXE_ROUTE_ITEM_ID =
-      "1328f11571aa43c4a62aec9c43f5824f";
+    const WEBSCENE_ID = ORG_B
+      ? "2daff1e51b53424e904a5064b5c5c7c8"
+      : "a874e00cced24ca6becd5f307189fcb3";
+
+    const AXE_ROUTE_ITEM_ID = ORG_B
+      ? "4ba0cab153984c4e9ab5299b070b9d1b"
+      : "1328f11571aa43c4a62aec9c43f5824f";
 
     const WEB_STYLE =
       "EsriRealisticTransportationStyle";
