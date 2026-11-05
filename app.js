@@ -15,8 +15,12 @@
     const ORG_B = new URLSearchParams(window.location.search)
       .get("org")?.toUpperCase() === "B";
 
+    // OAuth B est une application ArcGIS Online : utiliser le portail
+    // canonique www.arcgis.com pour les requêtes IdentityManager / PKCE.
+    // L'item WebScene B et les services B restent ceux d'Esri France.
+    // Le portail A et son parcours restent strictement inchangés.
     const PORTAL_URL = ORG_B
-      ? "https://esrifrance.maps.arcgis.com"
+      ? "https://www.arcgis.com"
       : "https://saintongeromane.maps.arcgis.com";
 
     const CLIENT_ID = ORG_B
