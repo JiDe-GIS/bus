@@ -145,7 +145,13 @@
           PORTAL_URL,
 
         popup:
-          false,
+          ORG_B,
+
+        popupCallbackUrl:
+          ORG_B ? "oauth-callback.html" : undefined,
+
+        authNamespace:
+          ORG_B ? "saintes-bus-esrifrance-b" : undefined,
 
         flowType:
           "auto",
@@ -159,6 +165,35 @@
     ]);
 
     async function authenticate() {
+      if (ORG_B) {
+        const portalResource = PORTAL_URL + "/sharing";
+        try {
+          await identityManager.checkSignInStatus(portalResource);
+          console.log("[OAuth B] Session existante.");
+          return;
+        } catch (error) {
+          console.log("[OAuth B] Une connexion interactive est requise.");
+        }
+        const loginButton = document.createElement("button");
+        loginButton.textContent = "Se connecter à Esri France";
+        loginButton.type = "button";
+        loginButton.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2147483647;padding:15px 25px;background:#0C3A6B;color:white;border:0;border-radius:6px;cursor:pointer;font:16px Avenir,Arial,sans-serif";
+        document.body.appendChild(loginButton);
+        await new Promise((resolve) => {
+          loginButton.addEventListener("click", () => {
+            loginButton.disabled = true;
+            identityManager.getCredential(portalResource).then(() => {
+              loginButton.remove();
+              resolve();
+            }).catch((error) => {
+              console.error("[OAuth B]", error);
+              loginButton.disabled = false;
+              loginButton.textContent = "Réessayer la connexion Esri France";
+            });
+          });
+        });
+        return;
+      }
       try {
         try {
           await identityManager.checkSignInStatus(
