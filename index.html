@@ -8,6 +8,41 @@
   <meta http-equiv="Expires" content="0" />
   <title>Saintes - Mobilité 3D</title>
 
+  <!-- Retour OAuth de BUS B : callback Esri sur une URL DÉJÀ autorisée dans AGOL.
+       Identique au protocole Esri OAuth PKCE (CustomEvent dans window.opener).
+       Le code de BUS A n'est pas chargé pendant ce retour en popup. -->
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const isOAuthResponse =
+        params.has("code") ||
+        params.has("state") ||
+        params.has("error") ||
+        /(?:^|[&#])(access_token|error|state)=/.test(window.location.hash);
+
+      if (!window.opener || !isOAuthResponse) return;
+
+      window.__busOAuthCallback = true;
+      try {
+        if (window.location.hash) {
+          window.opener.dispatchEvent(new CustomEvent(
+            "arcgis:auth:hash", { detail: window.location.hash }
+          ));
+        } else if (window.location.search) {
+          window.opener.dispatchEvent(new CustomEvent(
+            "arcgis:auth:location:search", { detail: window.location.search }
+          ));
+        }
+        window.close();
+      } catch (error) {
+        document.addEventListener("DOMContentLoaded", () => {
+          document.body.textContent =
+            "Retour OAuth impossible. Fermez cette fenêtre et réessayez depuis BUS B.";
+        });
+      }
+    })();
+  </script>
+
   <!-- Connexions préparées dès l'ouverture pour réduire la latence initiale. -->
   <link rel="preconnect" href="https://js.arcgis.com" crossorigin />
   <link rel="preconnect" href="https://saintongeromane.maps.arcgis.com" crossorigin />
@@ -74,7 +109,10 @@
   </div>
 
   <script type="module">
-    import("./app.js?v=" + Date.now());
+    // Le retour OAuth doit se terminer sans initialiser une seconde scène.
+    if (!window.__busOAuthCallback) {
+      import("./app.js?v=" + Date.now());
+    }
   </script>
 </body>
 </html>
